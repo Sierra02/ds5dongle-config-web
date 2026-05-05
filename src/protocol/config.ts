@@ -1,0 +1,166 @@
+export const CONFIG_BODY_SIZE = 12;
+export const FEATURE_REPORT_PAYLOAD_SIZE = 63;
+
+export type PollingRateMode = 0 | 1 | 2;
+
+export interface ConfigBody {
+  hapticsGain: number;
+  speakerVolume: number;
+  disableInactiveDisconnect: boolean;
+  disablePicoLed: boolean;
+  pollingRateMode: PollingRateMode;
+  hapticsBufferLength: number;
+}
+
+export interface ConfigValidationIssue {
+  field: keyof ConfigBody;
+  message: string;
+}
+
+export const DEFAULT_CONFIG: ConfigBody = {
+  hapticsGain: 1,
+  speakerVolume: 2,
+  disableInactiveDisconnect: false,
+  disablePicoLed: false,
+  pollingRateMode: 0,
+  hapticsBufferLength: 48,
+};
+
+export const POLLING_RATE_OPTIONS: Array<{
+  value: PollingRateMode;
+  label: string;
+}> = [
+  { value: 0, label: "250 Hz" },
+  { value: 1, label: "500 Hz" },
+  { value: 2, label: "Instant" },
+];
+
+export function decodeConfigBody(source: ArrayBuffer | DataView | Uint8Array): ConfigBody {
+  const bytes = toUint8Array(source);
+  const candidates = bytes.byteLength >= CONFIG_BODY_SIZE + 1 ? [0, 1] : [0];
+  const parsed = candidates.map((offset) => decodeAt(bytes, offset)).filter(Boolean) as ConfigBody[];
+  const valid = parsed.find((config) => validateConfig(config).length === 0);
+
+  if (valid) {
+    return valid;
+  }
+
+  if (parsed[0]) {
+    const issues = validateConfig(parsed[0]).map((issue) => issue.message).join("; ");
+    throw new Error(`Device returned invalid config: ${issues}`);
+  }
+
+  throw new Error(`Device returned ${bytes.byteLength} bytes, expected at least ${CONFIG_BODY_SIZE}`);
+}
+
+export function encodeConfigBody(config: ConfigBody): Uint8Array<ArrayBuffer> {
+  const issues = validateConfig(config);
+  if (issues.length > 0) {
+    throw new Error(issues.map((issue) => issue.message).join("; "));
+  }
+
+  const bytes = new Uint8Array(new ArrayBuffer(CONFIG_BODY_SIZE));
+  const view = new DataView(bytes.buffer);
+  view.setFloat32(0, config.hapticsGain, true);
+  view.setFloat32(4, config.speakerVolume, true);
+  view.setUint8(8, config.disableInactiveDisconnect ? 1 : 0);
+  view.setUint8(9, config.disablePicoLed ? 1 : 0);
+  view.setUint8(10, config.pollingRateMode);
+  view.setUint8(11, config.hapticsBufferLength);
+  return bytes;
+}
+
+export function validateConfig(config: ConfigBody): ConfigValidationIssue[] {
+  const issues: ConfigValidationIssue[] = [];
+
+  if (!Number.isFinite(config.hapticsGain) || config.hapticsGain < 1 || config.hapticsGain > 2) {
+    issues.push({ field: "hapticsGain", message: "Haptics gain must be between 1.0 and 2.0" });
+  }
+
+  if (!Number.isFinite(config.speakerVolume) || config.speakerVolume < 1 || config.speakerVolume > 2) {
+    issues.push({ field: "speakerVolume", message: "Speaker volume must be between 1.0 and 2.0" });
+  }
+
+  if (!Number.isInteger(config.pollingRateMode) || config.pollingRateMode < 0 || config.pollingRateMode > 2) {
+    issues.push({ field: "pollingRateMode", message: "Polling rate mode must be 0, 1, or 2" });
+  }
+
+  if (
+    !Number.isInteger(config.hapticsBufferLength) ||
+    config.hapticsBufferLength < 16 ||
+    config.hapticsBufferLength > 255
+  ) {
+    issues.push({ field: "hapticsBufferLength", message: "Haptics buffer length must be between 16 and 255" });
+  }
+
+  return issues;
+}
+
+export function normalizeConfig(config: ConfigBody): ConfigBody {
+  return {
+    hapticsGain: roundToStep(config.hapticsGain, 0.01),
+    speakerVolume: roundToStep(config.speakerVolume, 0.01),
+    disableInactiveDisconnect: Boolean(config.disableInactiveDisconnect),
+    disablePicoLed: Boolean(config.disablePicoLed),
+    pollingRateMode: clampInteger(config.pollingRateMode, 0, 2) as PollingRateMode,
+    hapticsBufferLength: clampInteger(config.hapticsBufferLength, 16, 255),
+  };
+}
+
+export function configsEqual(left: ConfigBody | null, right: ConfigBody | null): boolean {
+  if (!left || !right) {
+    return left === right;
+  }
+
+  return (
+    Math.abs(left.hapticsGain - right.hapticsGain) < 0.001 &&
+    Math.abs(left.speakerVolume - right.speakerVolume) < 0.001 &&
+    left.disableInactiveDisconnect === right.disableInactiveDisconnect &&
+    left.disablePicoLed === right.disablePicoLed &&
+    left.pollingRateMode === right.pollingRateMode &&
+    left.hapticsBufferLength === right.hapticsBufferLength
+  );
+}
+
+export function fieldIssue(
+  issues: ConfigValidationIssue[],
+  field: keyof ConfigBody,
+): ConfigValidationIssue | undefined {
+  return issues.find((issue) => issue.field === field);
+}
+
+function decodeAt(bytes: Uint8Array, offset: number): ConfigBody | null {
+  if (bytes.byteLength - offset < CONFIG_BODY_SIZE) {
+    return null;
+  }
+
+  const view = new DataView(bytes.buffer, bytes.byteOffset + offset, CONFIG_BODY_SIZE);
+  return {
+    hapticsGain: view.getFloat32(0, true),
+    speakerVolume: view.getFloat32(4, true),
+    disableInactiveDisconnect: view.getUint8(8) === 1,
+    disablePicoLed: view.getUint8(9) === 1,
+    pollingRateMode: view.getUint8(10) as PollingRateMode,
+    hapticsBufferLength: view.getUint8(11),
+  };
+}
+
+function toUint8Array(source: ArrayBuffer | DataView | Uint8Array): Uint8Array {
+  if (source instanceof Uint8Array) {
+    return source;
+  }
+
+  if (source instanceof DataView) {
+    return new Uint8Array(source.buffer, source.byteOffset, source.byteLength);
+  }
+
+  return new Uint8Array(source);
+}
+
+function roundToStep(value: number, step: number): number {
+  return Math.round(value / step) * step;
+}
+
+function clampInteger(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, Math.round(value)));
+}
