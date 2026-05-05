@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ConfigBody,
   DEFAULT_CONFIG,
@@ -39,6 +40,7 @@ export interface UseDs5BridgeResult {
 }
 
 export function useDs5Bridge(): UseDs5BridgeResult {
+  const { t } = useTranslation();
   const supported = webHidAvailable();
   const [client, setClient] = useState<Ds5BridgeHidClient | null>(null);
   const [authorizedDevices, setAuthorizedDevices] = useState<HIDDevice[]>([]);
@@ -55,25 +57,25 @@ export function useDs5Bridge(): UseDs5BridgeResult {
 
   const statusText = useMemo(() => {
     if (!supported) {
-      return "WebHID unavailable";
+      return t("status.webHidUnavailable");
     }
     if (operation) {
-      return operationLabel(operation);
+      return operationLabel(operation, t);
     }
     if (!client) {
-      return "Ready to connect";
+      return t("status.ready");
     }
     if (isDirty) {
-      return "Unsaved edits";
+      return t("status.unsaved");
     }
     if (saveState === "applied") {
-      return "Applied to device";
+      return t("status.applied");
     }
     if (saveState === "saved") {
-      return "Saved to flash";
+      return t("status.saved");
     }
-    return "Connected";
-  }, [client, isDirty, operation, saveState, supported]);
+    return t("status.connected");
+  }, [client, isDirty, operation, saveState, supported, t]);
 
   const refreshAuthorizedDevices = useCallback(async () => {
     if (!supported) {
@@ -230,7 +232,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
         setConfig(null);
         setDraft(DEFAULT_CONFIG);
         setSaveState("idle");
-        setError("Device disconnected");
+        setError(t("errors.disconnected"));
       }
       void refreshAuthorizedDevices();
     };
@@ -246,7 +248,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
       navigator.hid?.removeEventListener("disconnect", handleDisconnect);
       navigator.hid?.removeEventListener("connect", handleConnect);
     };
-  }, [client, refreshAuthorizedDevices]);
+  }, [client, refreshAuthorizedDevices, t]);
 
   return {
     supported,
@@ -275,18 +277,18 @@ export function useDs5Bridge(): UseDs5BridgeResult {
   };
 }
 
-function operationLabel(operation: Exclude<Operation, null>): string {
+function operationLabel(operation: Exclude<Operation, null>, t: (key: string) => string): string {
   switch (operation) {
     case "connecting":
-      return "Connecting";
+      return t("status.connecting");
     case "reading":
-      return "Reading config";
+      return t("status.reading");
     case "applying":
-      return "Applying config";
+      return t("status.applying");
     case "saving":
-      return "Saving to flash";
+      return t("status.saving");
     case "reconnecting":
-      return "Reconnecting USB";
+      return t("status.reconnecting");
   }
 }
 
