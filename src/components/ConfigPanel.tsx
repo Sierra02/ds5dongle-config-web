@@ -1,4 +1,6 @@
 import { SlidersHorizontal } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UseDs5BridgeResult } from "../hooks/useDs5Bridge";
 import { fieldIssue } from "../protocol/config";
 import { ControllerModeControl } from "./config/ControllerModeControl";
@@ -12,16 +14,20 @@ interface ConfigPanelProps {
 }
 
 export function ConfigPanel({ bridge }: ConfigPanelProps) {
-  return (
-    <section className="panel config-panel">
-      <div className="panel-title">
-        <SlidersHorizontal size={18} />
-        <h2>Configuration</h2>
-      </div>
+  const { t } = useTranslation();
 
-      <div className="control-stack">
+  return (
+    <Card className="panel config-panel">
+      <CardHeader className="p-0">
+        <CardTitle className="panel-title">
+          <SlidersHorizontal size={18} />
+          <h2>{t("config.title")}</h2>
+        </CardTitle>
+      </CardHeader>
+
+      <CardContent className="control-stack p-0">
         <FloatControl
-          label="Haptics gain"
+          label={t("config.hapticsGain")}
           value={bridge.draft.hapticsGain}
           min={1}
           max={2}
@@ -30,7 +36,7 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
           onChange={(value) => bridge.setDraftField("hapticsGain", value)}
         />
         <FloatControl
-          label="Speaker volume"
+          label={t("config.speakerVolume")}
           value={bridge.draft.speakerVolume}
           min={1}
           max={2}
@@ -39,7 +45,7 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
           onChange={(value) => bridge.setDraftField("speakerVolume", value)}
         />
         <IntegerControl
-          label="Inactive time"
+          label={`${t("config.inactiveTime")} (${t("config.inactiveTimeUnit")})`}
           value={bridge.draft.inactiveTime}
           min={10}
           max={60}
@@ -47,12 +53,12 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
           onChange={(value) => bridge.setDraftField("inactiveTime", value)}
         />
         <ToggleControl
-          label="Disable inactive disconnect"
+          label={t("config.disableInactiveDisconnect")}
           value={bridge.draft.disableInactiveDisconnect}
           onChange={(value) => bridge.setDraftField("disableInactiveDisconnect", value)}
         />
         <ToggleControl
-          label="Disable Pico LED"
+          label={t("config.disablePicoLed")}
           value={bridge.draft.disablePicoLed}
           onChange={(value) => bridge.setDraftField("disablePicoLed", value)}
         />
@@ -61,7 +67,7 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
           onChange={(value) => bridge.setDraftField("pollingRateMode", value)}
         />
         <IntegerControl
-          label="Haptics buffer length"
+          label={t("config.hapticsBufferLength")}
           value={bridge.draft.hapticsBufferLength}
           min={16}
           max={255}
@@ -72,7 +78,7 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
           value={bridge.draft.controllerMode}
           onChange={(value) => bridge.setDraftField("controllerMode", value)}
         />
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }

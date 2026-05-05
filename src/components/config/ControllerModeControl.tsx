@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CONTROLLER_MODE_OPTIONS, ControllerMode } from "../../protocol/config";
 
@@ -7,9 +8,11 @@ interface ControllerModeControlProps {
 }
 
 export function ControllerModeControl({ value, onChange }: ControllerModeControlProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="control-row">
-      <strong>Controller mode</strong>
+      <strong>{t("config.controllerMode")}</strong>
       <Tabs
         value={String(value)}
         onValueChange={(next) => onChange(Number(next) as ControllerMode)}

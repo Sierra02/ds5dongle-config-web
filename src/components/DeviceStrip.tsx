@@ -1,5 +1,7 @@
 import { Power, Usb } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface DeviceStripProps {
   authorizedDevices: HIDDevice[];
@@ -20,40 +22,44 @@ export function DeviceStrip({
   onConnect,
   onConnectAuthorized,
 }: DeviceStripProps) {
+  const { t } = useTranslation();
+
   return (
-    <section className="device-strip">
-      <div className="device-main">
-        <div className="device-icon">
-          <Usb size={22} />
+    <Card className="device-strip-card">
+      <CardContent className="device-strip">
+        <div className="device-main">
+          <div className="device-icon">
+            <Usb size={22} />
+          </div>
+          <div>
+            <div className="label">{t("device.label")}</div>
+            <strong>{deviceLabel}</strong>
+          </div>
         </div>
-        <div>
-          <div className="label">Device</div>
-          <strong>{deviceLabel}</strong>
-        </div>
-      </div>
-      <div className="device-actions">
-        {authorizedDevices.length > 0 && !client && (
+        <div className="device-actions">
+          {authorizedDevices.length > 0 && !client && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onConnectAuthorized(authorizedDevices[0])}
+              disabled={isBusy}
+              title={t("device.openTitle")}
+            >
+              <Power size={17} />
+              {t("device.open")}
+            </Button>
+          )}
           <Button
             type="button"
-            variant="outline"
-            onClick={() => onConnectAuthorized(authorizedDevices[0])}
-            disabled={isBusy}
-            title="Open the first previously authorized device"
+            onClick={onConnect}
+            disabled={!supported || isBusy}
+            title={t("device.connectTitle")}
           >
-            <Power size={17} />
-            Open
+            <Usb size={17} />
+            {t("device.connect")}
           </Button>
-        )}
-        <Button
-          type="button"
-          onClick={onConnect}
-          disabled={!supported || isBusy}
-          title="Choose a DS5 Bridge HID device"
-        >
-          <Usb size={17} />
-          Connect
-        </Button>
-      </div>
-    </section>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

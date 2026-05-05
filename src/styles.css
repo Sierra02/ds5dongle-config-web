@@ -140,6 +140,17 @@ button:disabled {
   margin-bottom: 18px;
 }
 
+.header-actions,
+.language-switcher {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.language-switcher {
+  color: var(--muted-foreground);
+}
+
 .eyebrow,
 .label {
   color: #5f6b7a;
@@ -222,21 +233,22 @@ h2 {
   font-weight: 700;
 }
 
-.device-strip,
-.panel {
-  background: #ffffff;
-  border: 1px solid #dce3eb;
-  border-radius: 8px;
-  box-shadow: 0 16px 42px rgba(16, 24, 40, 0.07);
+.device-strip-card {
+  margin-bottom: 16px;
+  padding: 0;
 }
 
 .device-strip {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
-  margin-bottom: 16px;
   padding: 14px;
+}
+
+.panel {
+  display: block;
+  padding: 18px;
 }
 
 .device-main {
@@ -277,10 +289,6 @@ h2 {
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 16px;
   align-items: start;
-}
-
-.panel {
-  padding: 18px;
 }
 
 .panel-title {
@@ -363,14 +371,23 @@ h2 {
     padding: 20px 0;
   }
 
-  .app-header,
-  .device-strip {
+  .app-header {
     align-items: stretch;
     flex-direction: column;
   }
 
+  .device-strip {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
   .status-pill {
     align-self: flex-start;
+  }
+
+  .header-actions {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .device-actions {
@@ -399,4 +416,5 @@ h2 {
   .panel {
     padding: 14px;
   }
+
 }

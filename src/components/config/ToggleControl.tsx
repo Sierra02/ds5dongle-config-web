@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Switch } from "@/components/ui/switch";
 
 interface ToggleControlProps {
@@ -7,6 +8,8 @@ interface ToggleControlProps {
 }
 
 export function ToggleControl({ label, value, onChange }: ToggleControlProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="control-row toggle-row">
       <strong>{label}</strong>
@@ -14,7 +17,7 @@ export function ToggleControl({ label, value, onChange }: ToggleControlProps) {
         checked={value}
         onCheckedChange={onChange}
         className="justify-self-end"
-        title={value ? "Enabled" : "Disabled"}
+        title={value ? t("toggle.enabled") : t("toggle.disabled")}
       />
     </div>
   );

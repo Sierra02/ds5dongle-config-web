@@ -1,4 +1,5 @@
 import { ChangeEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { ConfigValidationIssue } from "../../protocol/config";
@@ -13,6 +14,8 @@ interface IntegerControlProps {
 }
 
 export function IntegerControl({ label, value, min, max, issue, onChange }: IntegerControlProps) {
+  const { t } = useTranslation();
+
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const next = Number(event.currentTarget.value);
     if (Number.isFinite(next)) {
@@ -30,7 +33,7 @@ export function IntegerControl({ label, value, min, max, issue, onChange }: Inte
     <label className={`control-row ${issue ? "invalid" : ""}`}>
       <span>
         <strong>{label}</strong>
-        {issue && <small>{issue.message}</small>}
+        {issue && <small>{t(`validation.${issue.field}`)}</small>}
       </span>
       <div className="range-inputs">
         <Slider min={min} max={max} step={1} value={[value]} onValueChange={handleSliderChange} />
