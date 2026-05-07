@@ -12,6 +12,11 @@ interface FloatControlProps {
   step: number;
   displayScale?: number;
   displayOffset?: number;
+  displayMin?: number;
+  displayMax?: number;
+  displayStep?: number;
+  valueToDisplay?: (value: number) => number;
+  displayToValue?: (value: number) => number;
   fractionDigits?: number;
   issue?: ConfigValidationIssue;
   onChange: (value: number) => void;
@@ -25,23 +30,30 @@ export function FloatControl({
   step,
   displayScale = 1,
   displayOffset = 0,
+  displayMin,
+  displayMax,
+  displayStep,
+  valueToDisplay,
+  displayToValue,
   fractionDigits = 2,
   issue,
   onChange,
 }: FloatControlProps) {
   const { t } = useTranslation();
-  const inputValue = (value + displayOffset) * displayScale;
+  const toDisplay = valueToDisplay ?? ((next: number) => (next + displayOffset) * displayScale);
+  const toValue = displayToValue ?? ((next: number) => next / displayScale - displayOffset);
+  const inputValue = toDisplay(value);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const next = Number(event.currentTarget.value);
     if (Number.isFinite(next)) {
-      onChange(next / displayScale - displayOffset);
+      onChange(toValue(next));
     }
   };
 
   const handleSliderChange = ([next]: number[]) => {
     if (Number.isFinite(next)) {
-      onChange(next);
+      onChange(toValue(next));
     }
   };
 
@@ -52,12 +64,18 @@ export function FloatControl({
         {issue && <small>{t(`validation.${issue.field}`)}</small>}
       </span>
       <div className="range-inputs">
-        <Slider min={min} max={max} step={step} value={[value]} onValueChange={handleSliderChange} />
+        <Slider
+          min={displayMin ?? toDisplay(min)}
+          max={displayMax ?? toDisplay(max)}
+          step={displayStep ?? step * displayScale}
+          value={[inputValue]}
+          onValueChange={handleSliderChange}
+        />
         <Input
           type="number"
-          min={(min + displayOffset) * displayScale}
-          max={(max + displayOffset) * displayScale}
-          step={step * displayScale}
+          min={displayMin ?? toDisplay(min)}
+          max={displayMax ?? toDisplay(max)}
+          step={displayStep ?? step * displayScale}
           value={inputValue.toFixed(fractionDigits)}
           onChange={handleChange}
           aria-invalid={Boolean(issue)}

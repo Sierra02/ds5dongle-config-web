@@ -1,4 +1,4 @@
-import { Download, Power, RefreshCw, RotateCcw, Save, Send } from "lucide-react";
+import { Download, Power, RefreshCw, RotateCcw, Save } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,11 +6,10 @@ import { UseDs5BridgeResult } from "../hooks/useDs5Bridge";
 
 interface ActionsPanelProps {
   bridge: UseDs5BridgeResult;
-  hasIssues: boolean;
   isBusy: boolean;
 }
 
-export function ActionsPanel({ bridge, hasIssues, isBusy }: ActionsPanelProps) {
+export function ActionsPanel({ bridge, isBusy }: ActionsPanelProps) {
   const { t } = useTranslation();
 
   return (
@@ -33,16 +32,6 @@ export function ActionsPanel({ bridge, hasIssues, isBusy }: ActionsPanelProps) {
         >
           <RefreshCw size={17} />
           {t("actions.read")}
-        </Button>
-        <Button
-          type="button"
-          className="w-full"
-          onClick={bridge.applyConfig}
-          disabled={!bridge.client || isBusy || !bridge.isDirty || hasIssues}
-          title={t("actions.applyTitle")}
-        >
-          <Send size={17} />
-          {t("actions.apply")}
         </Button>
         <Button
           type="button"
@@ -69,8 +58,8 @@ export function ActionsPanel({ bridge, hasIssues, isBusy }: ActionsPanelProps) {
           type="button"
           variant="ghost"
           className="w-full"
-          onClick={bridge.resetDraft}
-          disabled={!bridge.config || isBusy || !bridge.isDirty}
+          onClick={bridge.resetToDefaults}
+          disabled={!bridge.client || isBusy || bridge.isDefaultConfig}
           title={t("actions.resetTitle")}
         >
           <RotateCcw size={17} />
@@ -89,6 +78,7 @@ export function ActionsPanel({ bridge, hasIssues, isBusy }: ActionsPanelProps) {
               ))}
             </ul>
           )}
+          {bridge.needsUsbReconnect && <div className="state-warning">{t("actions.reconnectRequired")}</div>}
         </div>
       </CardContent>
     </Card>

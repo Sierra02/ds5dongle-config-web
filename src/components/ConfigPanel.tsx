@@ -49,11 +49,14 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
             <FloatControl
               label={`${t("config.speakerVolume")} (%)`}
               value={bridge.draft.speakerVolume}
-              min={1}
-              max={2}
+              min={-100}
+              max={0}
               step={0.01}
-              displayScale={100}
-              displayOffset={-1}
+              displayMin={0}
+              displayMax={100}
+              displayStep={1}
+              valueToDisplay={speakerVolumeToPercent}
+              displayToValue={percentToSpeakerVolume}
               fractionDigits={0}
               issue={fieldIssue(bridge.issues, "speakerVolume")}
               onChange={(value) => bridge.setDraftField("speakerVolume", value)}
@@ -139,4 +142,20 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
       </CardContent>
     </Card>
   );
+}
+
+function speakerVolumeToPercent(value: number): number {
+  if (value <= -100) {
+    return 0;
+  }
+
+  return Math.min(100, Math.max(0, 100 * 10 ** (value / 20)));
+}
+
+function percentToSpeakerVolume(value: number): number {
+  if (value <= 0) {
+    return -100;
+  }
+
+  return Math.min(0, Math.max(-100, 20 * Math.log10(value / 100)));
 }

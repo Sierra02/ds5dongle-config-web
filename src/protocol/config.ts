@@ -21,12 +21,12 @@ export interface ConfigValidationIssue {
 
 export const DEFAULT_CONFIG: ConfigBody = {
   hapticsGain: 1,
-  speakerVolume: 2,
+  speakerVolume: 0,
   inactiveTime: 10,
   disableInactiveDisconnect: false,
   disablePicoLed: false,
   pollingRateMode: 0,
-  hapticsBufferLength: 48,
+  hapticsBufferLength: 64,
   controllerMode: 0,
 };
 
@@ -97,7 +97,7 @@ export function validateConfig(config: ConfigBody): ConfigValidationIssue[] {
     issues.push({ field: "hapticsGain" });
   }
 
-  if (!Number.isFinite(config.speakerVolume) || config.speakerVolume < 1 || config.speakerVolume > 2) {
+  if (!Number.isFinite(config.speakerVolume) || config.speakerVolume < -100 || config.speakerVolume > 0) {
     issues.push({ field: "speakerVolume" });
   }
 
@@ -127,7 +127,7 @@ export function validateConfig(config: ConfigBody): ConfigValidationIssue[] {
 export function normalizeConfig(config: ConfigBody): ConfigBody {
   return {
     hapticsGain: roundToStep(config.hapticsGain, 0.01),
-    speakerVolume: roundToStep(config.speakerVolume, 0.01),
+    speakerVolume: clampToStep(config.speakerVolume, -100, 0, 0.01),
     inactiveTime: clampInteger(config.inactiveTime, 5, 60),
     disableInactiveDisconnect: Boolean(config.disableInactiveDisconnect),
     disablePicoLed: Boolean(config.disablePicoLed),
@@ -207,4 +207,8 @@ function roundToStep(value: number, step: number): number {
 
 function clampInteger(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+function clampToStep(value: number, min: number, max: number, step: number): number {
+  return Math.min(max, Math.max(min, roundToStep(value, step)));
 }

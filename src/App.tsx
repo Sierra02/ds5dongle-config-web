@@ -13,7 +13,6 @@ export default function App() {
   const bridge = useDs5Bridge();
   const theme = useTheme();
   const isBusy = bridge.operation !== null;
-  const hasIssues = bridge.issues.length > 0;
 
   useEffect(() => {
     if (!bridge.error) {
@@ -66,7 +65,7 @@ export default function App() {
 
         <div className="content-grid">
           <ConfigPanel bridge={bridge} />
-          <ActionsPanel bridge={bridge} hasIssues={hasIssues} isBusy={isBusy} />
+          <ActionsPanel bridge={bridge} isBusy={isBusy} />
         </div>
 
         <AppFooter />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ConfigBody,
@@ -19,6 +19,7 @@ import {
 
 type Operation = "connecting" | "reading" | "applying" | "saving" | "reconnecting" | null;
 type SaveState = "idle" | "dirty" | "applied" | "saved";
+type UsbEffectiveConfig = Pick<ConfigBody, "pollingRateMode" | "controllerMode">;
 
 export interface UseDs5BridgeResult {
   supported: boolean;
@@ -34,15 +35,16 @@ export interface UseDs5BridgeResult {
   statusText: string;
   isConnected: boolean;
   isDirty: boolean;
+  isDefaultConfig: boolean;
+  needsUsbReconnect: boolean;
   setDraftField: <Key extends keyof ConfigBody>(field: Key, value: ConfigBody[Key]) => void;
   refreshAuthorizedDevices: () => Promise<void>;
   connect: () => Promise<void>;
   connectAuthorized: (device: HIDDevice) => Promise<void>;
   readConfig: () => Promise<void>;
-  applyConfig: () => Promise<void>;
   saveToFlash: () => Promise<void>;
   reconnectUsb: () => Promise<void>;
-  resetDraft: () => void;
+  resetToDefaults: () => Promise<void>;
   clearError: () => void;
 }
 
@@ -56,10 +58,18 @@ export function useDs5Bridge(): UseDs5BridgeResult {
   const [operation, setOperation] = useState<Operation>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [needsUsbReconnect, setNeedsUsbReconnect] = useState(false);
+  const clientRef = useRef<Ds5BridgeHidClient | null>(null);
+  const configRef = useRef<ConfigBody | null>(null);
+  const draftRef = useRef<ConfigBody>(DEFAULT_CONFIG);
+  const usbEffectiveConfigRef = useRef<UsbEffectiveConfig | null>(null);
+  const applyingRef = useRef(false);
+  const applyQueuedRef = useRef(false);
 
   const issues = useMemo(() => validateConfig(draft), [draft]);
   const isConnected = Boolean(client?.device.opened);
   const isDirty = !configsEqual(config, draft);
+  const isDefaultConfig = configsEqual(draft, DEFAULT_CONFIG);
   const deviceLabel = getDeviceLabel(client?.device ?? null);
 
   const statusText = useMemo(() => {
@@ -93,10 +103,16 @@ export function useDs5Bridge(): UseDs5BridgeResult {
     setAuthorizedDevices(await Ds5BridgeHidClient.authorizedDevices());
   }, [supported]);
 
-  const readConfigWithClient = useCallback(async (nextClient: Ds5BridgeHidClient) => {
+  const readConfigWithClient = useCallback(async (nextClient: Ds5BridgeHidClient, syncUsbEffectiveConfig = false) => {
     setOperation("reading");
     try {
       const nextConfig = normalizeConfig(await nextClient.readConfig());
+      configRef.current = nextConfig;
+      draftRef.current = nextConfig;
+      if (syncUsbEffectiveConfig) {
+        usbEffectiveConfigRef.current = pickUsbEffectiveConfig(nextConfig);
+        setNeedsUsbReconnect(false);
+      }
       setConfig(nextConfig);
       setDraft(nextConfig);
       setSaveState("idle");
@@ -111,12 +127,13 @@ export function useDs5Bridge(): UseDs5BridgeResult {
       setOperation("connecting");
       try {
         await nextClient.open();
+        clientRef.current = nextClient;
         setClient(nextClient);
         setError(null);
       } finally {
         setOperation(null);
       }
-      await readConfigWithClient(nextClient);
+      await readConfigWithClient(nextClient, true);
     },
     [readConfigWithClient],
   );
@@ -156,25 +173,54 @@ export function useDs5Bridge(): UseDs5BridgeResult {
     }
   }, [client, readConfigWithClient, t]);
 
-  const applyConfig = useCallback(async () => {
-    if (!client || issues.length > 0) {
-      return;
+  const applyLatestDraft = useCallback(async (): Promise<boolean> => {
+    if (applyingRef.current) {
+      applyQueuedRef.current = true;
+      return false;
     }
 
+    applyingRef.current = true;
     setOperation("applying");
     try {
-      const normalized = normalizeConfig(draft);
-      await client.applyConfig(normalized);
-      setConfig(normalized);
-      setDraft(normalized);
-      setSaveState("applied");
-      setError(null);
+      while (true) {
+        applyQueuedRef.current = false;
+
+        const nextClient = clientRef.current;
+        if (!nextClient) {
+          break;
+        }
+
+        const nextDraft = normalizeConfig(draftRef.current);
+        if (validateConfig(nextDraft).length > 0 || configsEqual(configRef.current, nextDraft)) {
+          break;
+        }
+
+        await nextClient.applyConfig(nextDraft);
+        configRef.current = nextDraft;
+        setConfig(nextDraft);
+        setNeedsUsbReconnect(usbEffectiveConfigChanged(usbEffectiveConfigRef.current, nextDraft));
+        setSaveState("applied");
+        setError(null);
+
+        if (configsEqual(draftRef.current, nextDraft)) {
+          draftRef.current = nextDraft;
+          setDraft(nextDraft);
+        }
+
+        if (!applyQueuedRef.current && configsEqual(configRef.current, draftRef.current)) {
+          break;
+        }
+      }
     } catch (cause) {
       setError(errorMessage(cause, t));
+      return false;
     } finally {
+      applyingRef.current = false;
       setOperation(null);
     }
-  }, [client, draft, issues.length, t]);
+
+    return true;
+  }, [t]);
 
   const saveToFlash = useCallback(async () => {
     if (!client || isDirty) {
@@ -201,6 +247,8 @@ export function useDs5Bridge(): UseDs5BridgeResult {
     setOperation("reconnecting");
     try {
       await client.reconnectUsb();
+      usbEffectiveConfigRef.current = pickUsbEffectiveConfig(configRef.current ?? draftRef.current);
+      setNeedsUsbReconnect(false);
       setError(null);
     } catch (cause) {
       setError(errorMessage(cause, t));
@@ -211,18 +259,41 @@ export function useDs5Bridge(): UseDs5BridgeResult {
 
   const setDraftField = useCallback(
     <Key extends keyof ConfigBody>(field: Key, value: ConfigBody[Key]) => {
-      setDraft((current) => ({ ...current, [field]: value }));
+      const nextDraft = { ...draftRef.current, [field]: value };
+      draftRef.current = nextDraft;
+      setDraft(nextDraft);
       setSaveState("dirty");
+      void applyLatestDraft();
     },
-    [],
+    [applyLatestDraft],
   );
 
-  const resetDraft = useCallback(() => {
-    if (config) {
-      setDraft(config);
-      setSaveState("idle");
+  const resetToDefaults = useCallback(async () => {
+    const nextClient = clientRef.current;
+    if (!nextClient) {
+      return;
     }
-  }, [config]);
+
+    draftRef.current = DEFAULT_CONFIG;
+    setDraft(DEFAULT_CONFIG);
+    setSaveState("dirty");
+
+    const applied = await applyLatestDraft();
+    if (!applied || !configsEqual(configRef.current, DEFAULT_CONFIG)) {
+      return;
+    }
+
+    setOperation("saving");
+    try {
+      await nextClient.saveToFlash();
+      setSaveState("saved");
+      setError(null);
+    } catch (cause) {
+      setError(errorMessage(cause, t));
+    } finally {
+      setOperation(null);
+    }
+  }, [applyLatestDraft, t]);
 
   useEffect(() => {
     void refreshAuthorizedDevices();
@@ -235,9 +306,14 @@ export function useDs5Bridge(): UseDs5BridgeResult {
 
     const handleDisconnect = (event: HIDConnectionEvent) => {
       if (client?.device === event.device) {
+        clientRef.current = null;
+        configRef.current = null;
+        draftRef.current = DEFAULT_CONFIG;
+        usbEffectiveConfigRef.current = null;
         setClient(null);
         setConfig(null);
         setDraft(DEFAULT_CONFIG);
+        setNeedsUsbReconnect(false);
         setSaveState("idle");
         setError(t("errors.disconnected"));
       }
@@ -271,15 +347,16 @@ export function useDs5Bridge(): UseDs5BridgeResult {
     statusText,
     isConnected,
     isDirty,
+    isDefaultConfig,
+    needsUsbReconnect,
     setDraftField,
     refreshAuthorizedDevices,
     connect,
     connectAuthorized,
     readConfig,
-    applyConfig,
     saveToFlash,
     reconnectUsb,
-    resetDraft,
+    resetToDefaults,
     clearError: () => setError(null),
   };
 }
@@ -297,6 +374,21 @@ function operationLabel(operation: Exclude<Operation, null>, t: (key: string) =>
     case "reconnecting":
       return t("status.reconnecting");
   }
+}
+
+function pickUsbEffectiveConfig(config: ConfigBody): UsbEffectiveConfig {
+  return {
+    pollingRateMode: config.pollingRateMode,
+    controllerMode: config.controllerMode,
+  };
+}
+
+function usbEffectiveConfigChanged(current: UsbEffectiveConfig | null, next: ConfigBody): boolean {
+  if (!current) {
+    return false;
+  }
+
+  return current.pollingRateMode !== next.pollingRateMode || current.controllerMode !== next.controllerMode;
 }
 
 function errorMessage(cause: unknown, t: (key: string, values?: Record<string, unknown>) => string): string {
