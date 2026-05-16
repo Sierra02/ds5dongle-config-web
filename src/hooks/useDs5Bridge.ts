@@ -17,14 +17,18 @@ import {
   webHidAvailable,
 } from "../protocol/ds5BridgeHid";
 
-type Operation = "connecting" | "reading" | "applying" | "saving" | "reconnecting" | null;
+type Operation = "connecting" | "reading" | "readingFirmware" | "applying" | "saving" | "reconnecting" | null;
 type SaveState = "idle" | "dirty" | "applied" | "saved";
 type UsbEffectiveConfig = Pick<ConfigBody, "pollingRateMode" | "controllerMode">;
+
+const SIGNAL_STRENGTH_REFRESH_INTERVAL_MS = 5_000;
 
 export interface UseDs5BridgeResult {
   supported: boolean;
   client: Ds5BridgeHidClient | null;
   deviceLabel: string;
+  firmwareVersion: string | null;
+  signalStrengthRssi: number | null;
   authorizedDevices: HIDDevice[];
   config: ConfigBody | null;
   draft: ConfigBody;
@@ -53,6 +57,8 @@ export function useDs5Bridge(): UseDs5BridgeResult {
   const supported = webHidAvailable();
   const [client, setClient] = useState<Ds5BridgeHidClient | null>(null);
   const [authorizedDevices, setAuthorizedDevices] = useState<HIDDevice[]>([]);
+  const [firmwareVersion, setFirmwareVersion] = useState<string | null>(null);
+  const [signalStrengthRssi, setSignalStrengthRssi] = useState<number | null>(null);
   const [config, setConfig] = useState<ConfigBody | null>(null);
   const [draft, setDraft] = useState<ConfigBody>(DEFAULT_CONFIG);
   const [operation, setOperation] = useState<Operation>(null);
@@ -122,6 +128,29 @@ export function useDs5Bridge(): UseDs5BridgeResult {
     }
   }, []);
 
+  const readFirmwareVersionWithClient = useCallback(async (nextClient: Ds5BridgeHidClient) => {
+    setOperation("readingFirmware");
+    try {
+      setFirmwareVersion(await nextClient.readFirmwareVersion());
+      setError(null);
+    } finally {
+      setOperation(null);
+    }
+  }, []);
+
+  const readSignalStrengthWithClient = useCallback(async (nextClient: Ds5BridgeHidClient) => {
+    try {
+      const nextSignalStrength = await nextClient.readSignalStrength();
+      if (clientRef.current === nextClient) {
+        setSignalStrengthRssi(nextSignalStrength);
+      }
+    } catch {
+      if (clientRef.current === nextClient) {
+        setSignalStrengthRssi(null);
+      }
+    }
+  }, []);
+
   const attachClient = useCallback(
     async (nextClient: Ds5BridgeHidClient) => {
       setOperation("connecting");
@@ -129,13 +158,23 @@ export function useDs5Bridge(): UseDs5BridgeResult {
         await nextClient.open();
         clientRef.current = nextClient;
         setClient(nextClient);
+        setFirmwareVersion(null);
+        setSignalStrengthRssi(null);
         setError(null);
       } finally {
         setOperation(null);
       }
       await readConfigWithClient(nextClient, true);
+      try {
+        await readFirmwareVersionWithClient(nextClient);
+      } catch (cause) {
+        setFirmwareVersion(null);
+        setError(errorMessage(cause, t));
+        setOperation(null);
+      }
+      void readSignalStrengthWithClient(nextClient);
     },
-    [readConfigWithClient],
+    [readConfigWithClient, readFirmwareVersionWithClient, readSignalStrengthWithClient, t],
   );
 
   const connect = useCallback(async () => {
@@ -300,6 +339,18 @@ export function useDs5Bridge(): UseDs5BridgeResult {
   }, [refreshAuthorizedDevices]);
 
   useEffect(() => {
+    if (!client) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void readSignalStrengthWithClient(client);
+    }, SIGNAL_STRENGTH_REFRESH_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [client, readSignalStrengthWithClient]);
+
+  useEffect(() => {
     if (!navigator.hid) {
       return;
     }
@@ -311,6 +362,8 @@ export function useDs5Bridge(): UseDs5BridgeResult {
         draftRef.current = DEFAULT_CONFIG;
         usbEffectiveConfigRef.current = null;
         setClient(null);
+        setFirmwareVersion(null);
+        setSignalStrengthRssi(null);
         setConfig(null);
         setDraft(DEFAULT_CONFIG);
         setNeedsUsbReconnect(false);
@@ -337,6 +390,8 @@ export function useDs5Bridge(): UseDs5BridgeResult {
     supported,
     client,
     deviceLabel,
+    firmwareVersion,
+    signalStrengthRssi,
     authorizedDevices,
     config,
     draft,
@@ -367,6 +422,8 @@ function operationLabel(operation: Exclude<Operation, null>, t: (key: string) =>
       return t("status.connecting");
     case "reading":
       return t("status.reading");
+    case "readingFirmware":
+      return t("status.readingFirmware");
     case "applying":
       return t("status.applying");
     case "saving":
@@ -398,6 +455,10 @@ function errorMessage(cause: unknown, t: (key: string, values?: Record<string, u
       const issues = fields.map((field) => t(`validation.${String(field)}`)).join("; ");
 
       return t("errors.invalidConfig", { issues });
+    }
+
+    if (cause.code === "versionMismatch") {
+      return t("errors.configVersionMismatch", cause.values);
     }
 
     return t("errors.invalidBytes", cause.values);
