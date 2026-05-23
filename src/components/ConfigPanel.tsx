@@ -37,7 +37,7 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
               <p>{t("config.sections.feedbackDescription")}</p>
             </div>
           </div>
-          <div className="control-stack">
+          <div className="control-stack feedback-controls">
             <FloatControl
               label={t("config.hapticsGain")}
               value={bridge.draft.hapticsGain}
@@ -47,17 +47,13 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
               issue={fieldIssue(bridge.issues, "hapticsGain")}
               onChange={(value) => bridge.setDraftField("hapticsGain", value)}
             />
-            <VolumeByteControl
-              label={t("config.speakerVolume")}
-              value={bridge.draft.speakerVolume}
-              sliderMax={100}
-              valueToSlider={volumeParameterToPercent}
-              sliderToValue={percentToVolumeParameter}
-              inputMax={127}
-              valueToInput={volumeParameterToInput}
-              inputToValue={volumeInputToParameter}
-              issue={fieldIssue(bridge.issues, "speakerVolume")}
-              onChange={(value) => bridge.setDraftField("speakerVolume", value)}
+            <IntegerControl
+              label={t("config.speakerGain")}
+              value={bridge.draft.speakerGain}
+              min={0}
+              max={7}
+              issue={fieldIssue(bridge.issues, "speakerGain")}
+              onChange={(value) => bridge.setDraftField("speakerGain", value)}
             />
             <VolumeByteControl
               label={t("config.headsetVolume")}
@@ -76,13 +72,17 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
               value={bridge.draft.syncSpeakerHeadsetVolume}
               onChange={(value) => bridge.setDraftField("syncSpeakerHeadsetVolume", value)}
             />
-            <IntegerControl
-              label={t("config.speakerGain")}
-              value={bridge.draft.speakerGain}
-              min={0}
-              max={7}
-              issue={fieldIssue(bridge.issues, "speakerGain")}
-              onChange={(value) => bridge.setDraftField("speakerGain", value)}
+            <VolumeByteControl
+              label={t("config.speakerVolume")}
+              value={bridge.draft.speakerVolume}
+              sliderMax={100}
+              valueToSlider={volumeParameterToPercent}
+              sliderToValue={percentToVolumeParameter}
+              inputMax={127}
+              valueToInput={volumeParameterToInput}
+              inputToValue={volumeInputToParameter}
+              issue={fieldIssue(bridge.issues, "speakerVolume")}
+              onChange={(value) => bridge.setDraftField("speakerVolume", value)}
             />
             <IntegerControl
               label={t("config.audioBufferLength")}
@@ -95,73 +95,79 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
           </div>
         </section>
 
-        <section className="config-section">
-          <div className="config-section-heading">
-            <span className="config-section-icon">
-              <Zap size={17} />
-            </span>
-            <div>
-              <h3>{t("config.sections.power")}</h3>
-              <p>{t("config.sections.powerDescription")}</p>
-            </div>
+        <div className="config-section-grid">
+          <div className="config-section-column">
+            <section className="config-section">
+              <div className="config-section-heading">
+                <span className="config-section-icon">
+                  <Zap size={17} />
+                </span>
+                <div>
+                  <h3>{t("config.sections.power")}</h3>
+                  <p>{t("config.sections.powerDescription")}</p>
+                </div>
+              </div>
+              <div className="control-stack compact-stack">
+                <IntegerControl
+                  label={`${t("config.inactiveTime")} (${t("config.inactiveTimeUnit")})`}
+                  value={bridge.draft.inactiveTime}
+                  min={5}
+                  max={60}
+                  issue={fieldIssue(bridge.issues, "inactiveTime")}
+                  onChange={(value) => bridge.setDraftField("inactiveTime", value)}
+                />
+                <ToggleControl
+                  label={t("config.disableInactiveDisconnect")}
+                  value={bridge.draft.disableInactiveDisconnect}
+                  onChange={(value) => bridge.setDraftField("disableInactiveDisconnect", value)}
+                />
+                <ToggleControl
+                  label={t("config.disablePicoLed")}
+                  value={bridge.draft.disablePicoLed}
+                  onChange={(value) => bridge.setDraftField("disablePicoLed", value)}
+                />
+              </div>
+            </section>
           </div>
-          <div className="control-stack compact-stack">
-            <IntegerControl
-              label={`${t("config.inactiveTime")} (${t("config.inactiveTimeUnit")})`}
-              value={bridge.draft.inactiveTime}
-              min={5}
-              max={60}
-              issue={fieldIssue(bridge.issues, "inactiveTime")}
-              onChange={(value) => bridge.setDraftField("inactiveTime", value)}
-            />
-            <ToggleControl
-              label={t("config.disableInactiveDisconnect")}
-              value={bridge.draft.disableInactiveDisconnect}
-              onChange={(value) => bridge.setDraftField("disableInactiveDisconnect", value)}
-            />
-            <ToggleControl
-              label={t("config.disablePicoLed")}
-              value={bridge.draft.disablePicoLed}
-              onChange={(value) => bridge.setDraftField("disablePicoLed", value)}
-            />
-          </div>
-        </section>
 
-        <section className="config-section">
-          <div className="config-section-heading">
-            <span className="config-section-icon">
-              <Gauge size={17} />
-            </span>
-            <div>
-              <h3>{t("config.sections.performance")}</h3>
-              <p>{t("config.sections.performanceDescription")}</p>
-            </div>
-          </div>
-          <div className="control-stack compact-stack">
-            <PollingRateControl
-              value={bridge.draft.pollingRateMode}
-              onChange={(value) => bridge.setDraftField("pollingRateMode", value)}
-            />
-          </div>
-        </section>
+          <div className="config-section-column">
+            <section className="config-section">
+              <div className="config-section-heading">
+                <span className="config-section-icon">
+                  <Gauge size={17} />
+                </span>
+                <div>
+                  <h3>{t("config.sections.performance")}</h3>
+                  <p>{t("config.sections.performanceDescription")}</p>
+                </div>
+              </div>
+              <div className="control-stack compact-stack">
+                <PollingRateControl
+                  value={bridge.draft.pollingRateMode}
+                  onChange={(value) => bridge.setDraftField("pollingRateMode", value)}
+                />
+              </div>
+            </section>
 
-        <section className="config-section">
-          <div className="config-section-heading">
-            <span className="config-section-icon">
-              <Gamepad2 size={17} />
-            </span>
-            <div>
-              <h3>{t("config.sections.compatibility")}</h3>
-              <p>{t("config.sections.compatibilityDescription")}</p>
-            </div>
+            <section className="config-section">
+              <div className="config-section-heading">
+                <span className="config-section-icon">
+                  <Gamepad2 size={17} />
+                </span>
+                <div>
+                  <h3>{t("config.sections.compatibility")}</h3>
+                  <p>{t("config.sections.compatibilityDescription")}</p>
+                </div>
+              </div>
+              <div className="control-stack compact-stack">
+                <ControllerModeControl
+                  value={bridge.draft.controllerMode}
+                  onChange={(value) => bridge.setDraftField("controllerMode", value)}
+                />
+              </div>
+            </section>
           </div>
-          <div className="control-stack compact-stack">
-            <ControllerModeControl
-              value={bridge.draft.controllerMode}
-              onChange={(value) => bridge.setDraftField("controllerMode", value)}
-            />
-          </div>
-        </section>
+        </div>
       </CardContent>
     </Card>
   );

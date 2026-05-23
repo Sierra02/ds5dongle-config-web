@@ -28,7 +28,7 @@ export const DEFAULT_CONFIG: ConfigBody = {
   speakerVolume: 0,
   headsetVolume: 0,
   syncSpeakerHeadsetVolume: false,
-  speakerGain: 0,
+  speakerGain: 2,
   inactiveTime: 10,
   disableInactiveDisconnect: false,
   disablePicoLed: false,

@@ -332,6 +332,10 @@ h2 {
   box-shadow: none;
 }
 
+.config-panel {
+  container-type: inline-size;
+}
+
 .device-main {
   display: flex;
   align-items: center;
@@ -471,10 +475,16 @@ h2 {
 
 .config-sections {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
-  grid-auto-flow: dense;
-  align-items: start;
+  grid-template-columns: 1fr;
   gap: clamp(8px, 1.2vh, 10px);
+}
+
+.config-section-grid,
+.config-section-column {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(8px, 1.2vh, 10px);
+  min-width: 0;
 }
 
 .config-section {
@@ -487,6 +497,27 @@ h2 {
 
 .config-section-featured {
   grid-row: auto;
+}
+
+@container (min-width: 800px) {
+  .config-section-grid {
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .feedback-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .feedback-controls .control-row {
+    margin-top: 0;
+  }
+
+  .feedback-controls .toggle-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
 }
 
 .config-section-heading {
