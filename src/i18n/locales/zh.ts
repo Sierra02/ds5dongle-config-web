@@ -76,6 +76,7 @@ export const zh = {
     pollingRateMode: "轮询率模式",
     audioBufferLength: "音频缓冲长度",
     controllerMode: "控制器模式",
+    disableUsbSn: "禁用 USB 序列号",
     controllerModeOptions: {
       ds5: "DS5",
       dse: "DSE",
@@ -98,7 +99,7 @@ export const zh = {
     saveDirtyTitle: "等待修改生效后再保存",
     reconnect: "重连 USB",
     reconnectTitle: "通过报告 0xF6 发送命令 0x03",
-    reconnectRequired: "轮询率模式或控制器模式已变更，请点击“重连 USB”后生效。",
+    reconnectRequired: "轮询率模式、控制器模式或 USB 序列号设置已变更，请点击“重连 USB”后生效。",
     reset: "重置为默认值",
     resetTitle: "恢复默认配置，立即应用并保存到 Flash",
     state: "状态",

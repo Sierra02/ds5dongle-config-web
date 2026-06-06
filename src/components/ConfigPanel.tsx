@@ -169,6 +169,11 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
                   value={bridge.draft.controllerMode}
                   onChange={(value) => bridge.setDraftField("controllerMode", value)}
                 />
+                <ToggleControl
+                  label={t("config.disableUsbSn")}
+                  value={bridge.draft.disableUsbSn}
+                  onChange={(value) => bridge.setDraftField("disableUsbSn", value)}
+                />
               </div>
             </section>
           </div>

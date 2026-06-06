@@ -76,6 +76,7 @@ export const en = {
     pollingRateMode: "Polling rate mode",
     audioBufferLength: "Audio buffer length",
     controllerMode: "Controller mode",
+    disableUsbSn: "Disable USB serial number",
     controllerModeOptions: {
       ds5: "DS5",
       dse: "DSE",
@@ -98,7 +99,7 @@ export const en = {
     saveDirtyTitle: "Wait for changes to apply before saving",
     reconnect: "Reconnect USB",
     reconnectTitle: "Send command 0x03 through report 0xF6",
-    reconnectRequired: "Polling rate or controller mode changed. Click Reconnect USB for it to take effect.",
+    reconnectRequired: "Polling rate, controller mode, or USB serial number changed. Click Reconnect USB for it to take effect.",
     reset: "Reset to Defaults",
     resetTitle: "Restore default config, apply it, and save it to flash",
     state: "State",

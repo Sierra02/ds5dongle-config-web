@@ -19,7 +19,7 @@ import {
 
 type Operation = "connecting" | "reading" | "readingFirmware" | "applying" | "saving" | "reconnecting" | null;
 type SaveState = "idle" | "dirty" | "applied" | "saved";
-type UsbEffectiveConfig = Pick<ConfigBody, "pollingRateMode" | "controllerMode">;
+type UsbEffectiveConfig = Pick<ConfigBody, "pollingRateMode" | "controllerMode" | "disableUsbSn">;
 
 const SIGNAL_STRENGTH_REFRESH_INTERVAL_MS = 5_000;
 
@@ -437,6 +437,7 @@ function pickUsbEffectiveConfig(config: ConfigBody): UsbEffectiveConfig {
   return {
     pollingRateMode: config.pollingRateMode,
     controllerMode: config.controllerMode,
+    disableUsbSn: config.disableUsbSn,
   };
 }
 
@@ -445,7 +446,11 @@ function usbEffectiveConfigChanged(current: UsbEffectiveConfig | null, next: Con
     return false;
   }
 
-  return current.pollingRateMode !== next.pollingRateMode || current.controllerMode !== next.controllerMode;
+  return (
+    current.pollingRateMode !== next.pollingRateMode ||
+    current.controllerMode !== next.controllerMode ||
+    current.disableUsbSn !== next.disableUsbSn
+  );
 }
 
 function syncDraftVolumeFields(changedDraft: ConfigBody, changedField: keyof ConfigBody): ConfigBody {
