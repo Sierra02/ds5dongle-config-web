@@ -59,6 +59,7 @@ export default function App() {
           deviceLabel={bridge.deviceLabel}
           firmwareVersion={bridge.firmwareVersion}
           signalStrengthRssi={bridge.signalStrengthRssi}
+          signalStatus={bridge.signalStatus}
           isBusy={isBusy}
           supported={bridge.supported}
           onConnect={bridge.connect}

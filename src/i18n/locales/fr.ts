@@ -52,6 +52,14 @@ export const fr = {
     signalStrengthUnknown: "Inconnu",
     signalStrengthTitle:
       "Plage RSSI [-128, 0], où 0 représente le meilleur signal. Actualisation toutes les 5 secondes.",
+    audioActivity: "Audio",
+    audioActivityUnknown: "Inconnu",
+    audioActivityTitle:
+      "Activité réelle du microphone et du haut-parleur de la manette, actualisée avec le RSSI.",
+    micLabel: "Mic",
+    speakerLabel: "Spk",
+    active: "Actif",
+    inactive: "Inactif",
     open: "Ouvrir",
     openTitle: "Ouvrir le premier appareil précédemment autorisé",
     connect: "Connecter",
@@ -106,15 +114,16 @@ export const fr = {
   actions: {
     title: "Actions",
     read: "Lire",
-    readTitle: "Lire la configuration actuelle depuis le rapport 0xF7",
+    readTitle:
+      "Envoyer la commande 0x04 via le rapport 0x80, puis lire la configuration actuelle depuis 0x81",
     apply: "Appliquer à l’appareil",
-    applyTitle: "Envoyer la commande 0x01 via le rapport 0xF6",
+    applyTitle: "Envoyer la commande 0x01 via le rapport 0x80",
     save: "Sauvegarder dans la mémoire flash",
-    saveTitle: "Envoyer la commande 0x02 via le rapport 0xF6",
+    saveTitle: "Envoyer la commande 0x02 via le rapport 0x80",
     saveDirtyTitle:
       "Attendez que les modifications soient appliquées avant de sauvegarder",
     reconnect: "Reconnecter l’USB",
-    reconnectTitle: "Envoyer la commande 0x03 via le rapport 0xF6",
+    reconnectTitle: "Envoyer la commande 0x03 via le rapport 0x80",
     reconnectRequired:
       "La fréquence d’interrogation ou le mode de la manette a changé. Cliquez sur Reconnecter l’USB pour appliquer les changements.",
     reset: "Réinitialiser par défaut",
