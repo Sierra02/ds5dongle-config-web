@@ -15,6 +15,7 @@ import {
   WEBHID_UNAVAILABLE_ERROR,
   getDeviceLabel,
   webHidAvailable,
+  type ConfigVersionWarning,
   type SignalStatus,
 } from "../protocol/ds5BridgeHid";
 
@@ -43,6 +44,7 @@ export interface UseDs5BridgeResult {
   saveState: SaveState;
   operation: Operation;
   error: string | null;
+  configVersionWarning: ConfigVersionWarning | null;
   statusText: string;
   isConnected: boolean;
   isDirty: boolean;
@@ -71,6 +73,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
   const [operation, setOperation] = useState<Operation>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [configVersionWarning, setConfigVersionWarning] = useState<ConfigVersionWarning | null>(null);
   const [needsUsbReconnect, setNeedsUsbReconnect] = useState(false);
   const clientRef = useRef<Ds5BridgeHidClient | null>(null);
   const configRef = useRef<ConfigBody | null>(null);
@@ -120,7 +123,8 @@ export function useDs5Bridge(): UseDs5BridgeResult {
   const readConfigWithClient = useCallback(async (nextClient: Ds5BridgeHidClient, syncUsbEffectiveConfig = false) => {
     setOperation("reading");
     try {
-      const nextConfig = normalizeConfig(await nextClient.readConfig());
+      const { config: rawConfig, versionWarning } = await nextClient.readConfig();
+      const nextConfig = normalizeConfig(rawConfig);
       configRef.current = nextConfig;
       draftRef.current = nextConfig;
       if (syncUsbEffectiveConfig) {
@@ -130,6 +134,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
       setConfig(nextConfig);
       setDraft(nextConfig);
       setSaveState("idle");
+      setConfigVersionWarning(versionWarning);
       setError(null);
     } finally {
       setOperation(null);
@@ -168,6 +173,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
         setClient(nextClient);
         setFirmwareVersion(null);
         setSignalStatus(UNKNOWN_SIGNAL_STATUS);
+        setConfigVersionWarning(null);
         setError(null);
       } finally {
         setOperation(null);
@@ -374,6 +380,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
         setSignalStatus(UNKNOWN_SIGNAL_STATUS);
         setConfig(null);
         setDraft(DEFAULT_CONFIG);
+        setConfigVersionWarning(null);
         setNeedsUsbReconnect(false);
         setSaveState("idle");
         setError(t("errors.disconnected"));
@@ -408,6 +415,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
     saveState,
     operation,
     error,
+    configVersionWarning,
     statusText,
     isConnected,
     isDirty,

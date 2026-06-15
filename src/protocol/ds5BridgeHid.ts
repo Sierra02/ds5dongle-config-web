@@ -1,7 +1,8 @@
 import {
+  CONFIG_BODY_VERSION,
   ConfigBody,
+  ConfigDecodeError,
   FEATURE_REPORT_PAYLOAD_SIZE,
-  decodeConfigBody,
   normalizeConfig,
   validateConfig,
 } from "./config";
@@ -17,7 +18,7 @@ const COMMAND_PREFIX = 0x66;
 const CMD_UPDATE_CONFIG_FIELD = 0x01;
 const CMD_SAVE_TO_FLASH = 0x02;
 const CMD_RECONNECT_USB = 0x03;
-const CMD_GET_CONFIG = 0x04;
+const CMD_GET_CONFIG_FIELD = 0x04;
 const CMD_GET_FIRMWARE_VERSION = 0x05;
 const CMD_GET_SIGNAL_STATUS = 0x06;
 
@@ -25,6 +26,16 @@ export interface SignalStatus {
   rssi: number | null;
   micActive: boolean | null;
   speakerActive: boolean | null;
+}
+
+export interface ConfigVersionWarning {
+  actual: number;
+  expected: number;
+}
+
+export interface ConfigReadResult {
+  config: ConfigBody;
+  versionWarning: ConfigVersionWarning | null;
 }
 
 export class Ds5BridgeHidClient {
@@ -73,9 +84,31 @@ export class Ds5BridgeHidClient {
     }
   }
 
-  async readConfig(): Promise<ConfigBody> {
+  async readConfig(): Promise<ConfigReadResult> {
     await this.open();
-    return decodeConfigBody(await this.exchange(CMD_GET_CONFIG));
+    const version = readUint8ConfigField(await this.readConfigField(0x00), 0x00);
+    const versionWarning =
+      version === CONFIG_BODY_VERSION
+        ? null
+        : {
+            actual: version,
+            expected: CONFIG_BODY_VERSION,
+          };
+
+    const entries: Array<[keyof ConfigBody, ConfigBody[keyof ConfigBody]]> = [];
+    for (const field of CONFIG_FIELD_SPECS) {
+      entries.push([field.key, field.decode(await this.readConfigField(field.fieldId))]);
+    }
+
+    const config = Object.fromEntries(entries) as unknown as ConfigBody;
+    const issues = validateConfig(config);
+    if (issues.length > 0) {
+      throw new ConfigDecodeError("invalidConfig", {
+        issues: issues.map((issue) => issue.field),
+      });
+    }
+
+    return { config, versionWarning };
   }
 
   async readFirmwareVersion(): Promise<string> {
@@ -134,6 +167,20 @@ export class Ds5BridgeHidClient {
     });
   }
 
+  private async readConfigField(fieldId: number): Promise<Uint8Array> {
+    const response = await this.exchange(CMD_GET_CONFIG_FIELD, byte(fieldId));
+    if (response.byteLength < 1 || response[0] !== (fieldId & 0xff)) {
+      const actual = response.byteLength > 0 ? response[0] : null;
+      throw new Error(
+        `Unexpected config field response: requested 0x${fieldId.toString(16).padStart(2, "0")}, got ${
+          actual === null ? "empty" : `0x${actual.toString(16).padStart(2, "0")}`
+        }`,
+      );
+    }
+
+    return response.slice(1);
+  }
+
   private async sendCommand(command: number, payload?: Uint8Array): Promise<void> {
     await this.device.sendFeatureReport(REPORT_COMMAND, commandReport(command, payload));
   }
@@ -169,6 +216,7 @@ interface ConfigFieldSpec {
   key: keyof ConfigBody;
   fieldId: number;
   encode: (config: ConfigBody) => Uint8Array<ArrayBuffer>;
+  decode: (bytes: Uint8Array) => ConfigBody[keyof ConfigBody];
   equals?: (left: ConfigBody, right: ConfigBody) => boolean;
 }
 
@@ -177,32 +225,105 @@ const CONFIG_FIELD_SPECS: ConfigFieldSpec[] = [
     key: "hapticsGain",
     fieldId: 0x01,
     encode: (config) => float32Bytes(config.hapticsGain),
+    decode: (bytes) => readFloat32ConfigField(bytes, 0x01),
     equals: (left, right) => Math.abs(left.hapticsGain - right.hapticsGain) < 0.001,
   },
-  { key: "speakerVolume", fieldId: 0x02, encode: (config) => byte(config.speakerVolume) },
-  { key: "headsetVolume", fieldId: 0x03, encode: (config) => byte(config.headsetVolume) },
+  {
+    key: "speakerVolume",
+    fieldId: 0x02,
+    encode: (config) => byte(config.speakerVolume),
+    decode: (bytes) => readUint8ConfigField(bytes, 0x02),
+  },
+  {
+    key: "headsetVolume",
+    fieldId: 0x03,
+    encode: (config) => byte(config.headsetVolume),
+    decode: (bytes) => readUint8ConfigField(bytes, 0x03),
+  },
   {
     key: "syncSpeakerHeadsetVolume",
     fieldId: 0x04,
     encode: (config) => boolByte(config.syncSpeakerHeadsetVolume),
+    decode: (bytes) => readBoolConfigField(bytes, 0x04),
   },
-  { key: "speakerGain", fieldId: 0x05, encode: (config) => byte(config.speakerGain) },
-  { key: "inactiveTime", fieldId: 0x06, encode: (config) => byte(config.inactiveTime) },
+  {
+    key: "speakerGain",
+    fieldId: 0x05,
+    encode: (config) => byte(config.speakerGain),
+    decode: (bytes) => readUint8ConfigField(bytes, 0x05),
+  },
+  {
+    key: "inactiveTime",
+    fieldId: 0x06,
+    encode: (config) => byte(config.inactiveTime),
+    decode: (bytes) => readUint8ConfigField(bytes, 0x06),
+  },
   {
     key: "disableInactiveDisconnect",
     fieldId: 0x07,
     encode: (config) => boolByte(config.disableInactiveDisconnect),
+    decode: (bytes) => readBoolConfigField(bytes, 0x07),
   },
-  { key: "disablePicoLed", fieldId: 0x08, encode: (config) => boolByte(config.disablePicoLed) },
-  { key: "pollingRateMode", fieldId: 0x09, encode: (config) => byte(config.pollingRateMode) },
-  { key: "audioBufferLength", fieldId: 0x0a, encode: (config) => byte(config.audioBufferLength) },
-  { key: "controllerMode", fieldId: 0x0b, encode: (config) => byte(config.controllerMode) },
-  { key: "lockVolume", fieldId: 0x0c, encode: (config) => boolByte(config.lockVolume) },
-  { key: "disableUsbSn", fieldId: 0x0d, encode: (config) => boolByte(config.disableUsbSn) },
-  { key: "psShortcutEnabled", fieldId: 0x0e, encode: (config) => boolByte(config.psShortcutEnabled) },
-  { key: "disableMic", fieldId: 0x0f, encode: (config) => boolByte(config.disableMic) },
-  { key: "disableSpeaker", fieldId: 0x10, encode: (config) => boolByte(config.disableSpeaker) },
-  { key: "enableWake", fieldId: 0x11, encode: (config) => boolByte(config.enableWake) },
+  {
+    key: "disablePicoLed",
+    fieldId: 0x08,
+    encode: (config) => boolByte(config.disablePicoLed),
+    decode: (bytes) => readBoolConfigField(bytes, 0x08),
+  },
+  {
+    key: "pollingRateMode",
+    fieldId: 0x09,
+    encode: (config) => byte(config.pollingRateMode),
+    decode: (bytes) => readUint8ConfigField(bytes, 0x09),
+  },
+  {
+    key: "audioBufferLength",
+    fieldId: 0x0a,
+    encode: (config) => byte(config.audioBufferLength),
+    decode: (bytes) => readUint8ConfigField(bytes, 0x0a),
+  },
+  {
+    key: "controllerMode",
+    fieldId: 0x0b,
+    encode: (config) => byte(config.controllerMode),
+    decode: (bytes) => readUint8ConfigField(bytes, 0x0b),
+  },
+  {
+    key: "lockVolume",
+    fieldId: 0x0c,
+    encode: (config) => boolByte(config.lockVolume),
+    decode: (bytes) => readBoolConfigField(bytes, 0x0c),
+  },
+  {
+    key: "disableUsbSn",
+    fieldId: 0x0d,
+    encode: (config) => boolByte(config.disableUsbSn),
+    decode: (bytes) => readBoolConfigField(bytes, 0x0d),
+  },
+  {
+    key: "psShortcutEnabled",
+    fieldId: 0x0e,
+    encode: (config) => boolByte(config.psShortcutEnabled),
+    decode: (bytes) => readBoolConfigField(bytes, 0x0e),
+  },
+  {
+    key: "disableMic",
+    fieldId: 0x0f,
+    encode: (config) => boolByte(config.disableMic),
+    decode: (bytes) => readBoolConfigField(bytes, 0x0f),
+  },
+  {
+    key: "disableSpeaker",
+    fieldId: 0x10,
+    encode: (config) => boolByte(config.disableSpeaker),
+    decode: (bytes) => readBoolConfigField(bytes, 0x10),
+  },
+  {
+    key: "enableWake",
+    fieldId: 0x11,
+    encode: (config) => boolByte(config.enableWake),
+    decode: (bytes) => readBoolConfigField(bytes, 0x11),
+  },
 ];
 
 function commandReport(command: number, payload?: Uint8Array): Uint8Array<ArrayBuffer> {
@@ -303,6 +424,26 @@ function float32Bytes(value: number): Uint8Array<ArrayBuffer> {
   const bytes = new Uint8Array(new ArrayBuffer(4));
   new DataView(bytes.buffer).setFloat32(0, value, true);
   return bytes;
+}
+
+function readUint8ConfigField(bytes: Uint8Array, fieldId: number): number {
+  if (bytes.byteLength < 1) {
+    throw new Error(`Config field 0x${fieldId.toString(16).padStart(2, "0")} response is too short`);
+  }
+
+  return bytes[0];
+}
+
+function readBoolConfigField(bytes: Uint8Array, fieldId: number): boolean {
+  return readUint8ConfigField(bytes, fieldId) === 1;
+}
+
+function readFloat32ConfigField(bytes: Uint8Array, fieldId: number): number {
+  if (bytes.byteLength < 4) {
+    throw new Error(`Config field 0x${fieldId.toString(16).padStart(2, "0")} response is too short`);
+  }
+
+  return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getFloat32(0, true);
 }
 
 function toInt8(byte: number): number {

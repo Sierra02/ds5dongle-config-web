@@ -32,6 +32,8 @@ export const fr = {
   notice: {
     webHidUnsupported:
       "WebHID est disponible sur les navigateurs basés sur Chromium via des origines sécurisées.",
+    configVersionMismatch:
+      "Version de configuration incompatible : cette page prend en charge la version {{expected}}, l’appareil a renvoyé la version {{actual}}. La lecture et l’écriture par champ continuent ; certains champs récents peuvent être indisponibles.",
   },
   pwa: {
     offlineReady:
@@ -116,7 +118,7 @@ export const fr = {
     title: "Actions",
     read: "Lire",
     readTitle:
-      "Envoyer la commande 0x04 via le rapport 0x80, puis lire la configuration actuelle depuis 0x81",
+      "Envoyer la commande 0x04 via le rapport 0x80 pour chaque champ, puis lire les champs depuis 0x81",
     apply: "Appliquer à l’appareil",
     applyTitle: "Envoyer la commande 0x01 via le rapport 0x80",
     save: "Sauvegarder dans la mémoire flash",

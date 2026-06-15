@@ -52,7 +52,7 @@ export default function App() {
           theme={theme.theme}
           onThemeChange={theme.setTheme}
         />
-        <NoticeList supported={bridge.supported} />
+        <NoticeList supported={bridge.supported} configVersionWarning={bridge.configVersionWarning} />
         <DeviceStrip
           authorizedDevices={bridge.authorizedDevices}
           client={bridge.client}

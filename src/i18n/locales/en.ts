@@ -30,6 +30,8 @@ export const en = {
   },
   notice: {
     webHidUnsupported: "WebHID is available in Chromium-based browsers on secure origins.",
+    configVersionMismatch:
+      "Config version mismatch: this page supports version {{expected}}, device returned version {{actual}}. Field-based reads and writes will continue; some newer fields may be unavailable.",
   },
   pwa: {
     offlineReady: "This page is cached and ready for offline access.",
@@ -102,7 +104,7 @@ export const en = {
   actions: {
     title: "Actions",
     read: "Read",
-    readTitle: "Send command 0x04 through report 0x80, then read current config from 0x81",
+    readTitle: "Send command 0x04 through report 0x80 for each field, then read config fields from 0x81",
     apply: "Apply to Device",
     applyTitle: "Send command 0x01 through report 0x80",
     save: "Save to Flash",

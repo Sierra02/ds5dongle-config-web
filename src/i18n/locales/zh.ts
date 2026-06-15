@@ -30,6 +30,8 @@ export const zh = {
   },
   notice: {
     webHidUnsupported: "WebHID 仅在基于 Chromium 的浏览器与安全来源中可用。",
+    configVersionMismatch:
+      "配置版本不匹配：网页支持版本 {{expected}}，设备返回版本 {{actual}}。已继续按字段读取与写入，部分新增字段可能不可用。",
   },
   pwa: {
     offlineReady: "网页已缓存，可离线访问",
@@ -102,7 +104,7 @@ export const zh = {
   actions: {
     title: "操作",
     read: "读取",
-    readTitle: "通过报告 0x80 发送命令 0x04，并从 0x81 读取当前配置",
+    readTitle: "通过报告 0x80 逐项发送命令 0x04，并从 0x81 读取当前配置字段",
     apply: "应用到设备",
     applyTitle: "通过报告 0x80 发送命令 0x01",
     save: "保存到 Flash",
