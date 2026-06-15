@@ -20,6 +20,7 @@ const CMD_RECONNECT_USB = 0x03;
 const CMD_GET_CONFIG = 0x04;
 const CMD_GET_FIRMWARE_VERSION = 0x05;
 const CMD_GET_SIGNAL_STATUS = 0x06;
+const CMD_REBOOT_BOOTLOADER = 0x07;
 
 export interface SignalStatus {
   rssi: number | null;
@@ -119,6 +120,11 @@ export class Ds5BridgeHidClient {
     await this.sendCommand(CMD_RECONNECT_USB);
   }
 
+  async rebootToBootloader(): Promise<void> {
+    await this.open();
+    await this.sendCommand(CMD_REBOOT_BOOTLOADER);
+  }
+
   private async sendCommand(command: number, payload?: Uint8Array): Promise<void> {
     await this.device.sendFeatureReport(REPORT_COMMAND, commandReport(command, payload));
   }
@@ -187,6 +193,7 @@ const CONFIG_FIELD_SPECS: ConfigFieldSpec[] = [
   { key: "psShortcutEnabled", fieldId: 0x0e, encode: (config) => boolByte(config.psShortcutEnabled) },
   { key: "disableMic", fieldId: 0x0f, encode: (config) => boolByte(config.disableMic) },
   { key: "disableSpeaker", fieldId: 0x10, encode: (config) => boolByte(config.disableSpeaker) },
+  { key: "enableWake", fieldId: 0x11, encode: (config) => boolByte(config.enableWake) },
 ];
 
 function commandReport(command: number, payload?: Uint8Array): Uint8Array<ArrayBuffer> {
