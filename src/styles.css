@@ -417,7 +417,9 @@ h2 {
 }
 
 .footer-copy,
-.footer-link {
+.footer-actions,
+.footer-link,
+.footer-version {
   display: flex;
 }
 
@@ -439,9 +441,28 @@ h2 {
   line-height: 1.45;
 }
 
-.footer-link {
+.footer-actions {
   align-items: center;
   align-self: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.footer-version {
+  align-items: center;
+  min-height: 36px;
+  padding: 8px 11px;
+  color: var(--app-heading);
+  background: color-mix(in srgb, var(--accent) 72%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+  border-radius: 999px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.footer-link {
+  align-items: center;
   gap: 7px;
   padding: 9px 12px;
   color: var(--primary);
@@ -741,6 +762,11 @@ h2 {
 
   .footer-link {
     align-self: flex-start;
+  }
+
+  .footer-actions {
+    align-self: stretch;
+    justify-content: flex-start;
   }
 
   .config-sections {
