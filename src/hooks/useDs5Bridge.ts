@@ -15,13 +15,20 @@ import {
   WEBHID_UNAVAILABLE_ERROR,
   getDeviceLabel,
   webHidAvailable,
+  type ConfigVersionWarning,
+  type SignalStatus,
 } from "../protocol/ds5BridgeHid";
 
 type Operation = "connecting" | "reading" | "readingFirmware" | "applying" | "saving" | "reconnecting" | null;
 type SaveState = "idle" | "dirty" | "applied" | "saved";
-type UsbEffectiveConfig = Pick<ConfigBody, "pollingRateMode" | "controllerMode">;
+type UsbEffectiveConfig = Pick<ConfigBody, "pollingRateMode" | "controllerMode" | "disableUsbSn">;
 
 const SIGNAL_STRENGTH_REFRESH_INTERVAL_MS = 5_000;
+const UNKNOWN_SIGNAL_STATUS: SignalStatus = {
+  rssi: null,
+  micActive: null,
+  speakerActive: null,
+};
 
 export interface UseDs5BridgeResult {
   supported: boolean;
@@ -29,6 +36,7 @@ export interface UseDs5BridgeResult {
   deviceLabel: string;
   firmwareVersion: string | null;
   signalStrengthRssi: number | null;
+  signalStatus: SignalStatus;
   authorizedDevices: HIDDevice[];
   config: ConfigBody | null;
   draft: ConfigBody;
@@ -36,6 +44,7 @@ export interface UseDs5BridgeResult {
   saveState: SaveState;
   operation: Operation;
   error: string | null;
+  configVersionWarning: ConfigVersionWarning | null;
   statusText: string;
   isConnected: boolean;
   isDirty: boolean;
@@ -58,12 +67,13 @@ export function useDs5Bridge(): UseDs5BridgeResult {
   const [client, setClient] = useState<Ds5BridgeHidClient | null>(null);
   const [authorizedDevices, setAuthorizedDevices] = useState<HIDDevice[]>([]);
   const [firmwareVersion, setFirmwareVersion] = useState<string | null>(null);
-  const [signalStrengthRssi, setSignalStrengthRssi] = useState<number | null>(null);
+  const [signalStatus, setSignalStatus] = useState<SignalStatus>(UNKNOWN_SIGNAL_STATUS);
   const [config, setConfig] = useState<ConfigBody | null>(null);
   const [draft, setDraft] = useState<ConfigBody>(DEFAULT_CONFIG);
   const [operation, setOperation] = useState<Operation>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [configVersionWarning, setConfigVersionWarning] = useState<ConfigVersionWarning | null>(null);
   const [needsUsbReconnect, setNeedsUsbReconnect] = useState(false);
   const clientRef = useRef<Ds5BridgeHidClient | null>(null);
   const configRef = useRef<ConfigBody | null>(null);
@@ -77,6 +87,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
   const isDirty = !configsEqual(config, draft);
   const isDefaultConfig = configsEqual(draft, DEFAULT_CONFIG);
   const deviceLabel = getDeviceLabel(client?.device ?? null);
+  const signalStrengthRssi = signalStatus.rssi;
 
   const statusText = useMemo(() => {
     if (!supported) {
@@ -112,7 +123,8 @@ export function useDs5Bridge(): UseDs5BridgeResult {
   const readConfigWithClient = useCallback(async (nextClient: Ds5BridgeHidClient, syncUsbEffectiveConfig = false) => {
     setOperation("reading");
     try {
-      const nextConfig = normalizeConfig(await nextClient.readConfig());
+      const { config: rawConfig, versionWarning } = await nextClient.readConfig();
+      const nextConfig = normalizeConfig(rawConfig);
       configRef.current = nextConfig;
       draftRef.current = nextConfig;
       if (syncUsbEffectiveConfig) {
@@ -122,6 +134,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
       setConfig(nextConfig);
       setDraft(nextConfig);
       setSaveState("idle");
+      setConfigVersionWarning(versionWarning);
       setError(null);
     } finally {
       setOperation(null);
@@ -138,15 +151,15 @@ export function useDs5Bridge(): UseDs5BridgeResult {
     }
   }, []);
 
-  const readSignalStrengthWithClient = useCallback(async (nextClient: Ds5BridgeHidClient) => {
+  const readSignalStatusWithClient = useCallback(async (nextClient: Ds5BridgeHidClient) => {
     try {
-      const nextSignalStrength = await nextClient.readSignalStrength();
+      const nextSignalStatus = await nextClient.readSignalStatus();
       if (clientRef.current === nextClient) {
-        setSignalStrengthRssi(nextSignalStrength);
+        setSignalStatus(nextSignalStatus);
       }
     } catch {
       if (clientRef.current === nextClient) {
-        setSignalStrengthRssi(null);
+        setSignalStatus(UNKNOWN_SIGNAL_STATUS);
       }
     }
   }, []);
@@ -159,7 +172,8 @@ export function useDs5Bridge(): UseDs5BridgeResult {
         clientRef.current = nextClient;
         setClient(nextClient);
         setFirmwareVersion(null);
-        setSignalStrengthRssi(null);
+        setSignalStatus(UNKNOWN_SIGNAL_STATUS);
+        setConfigVersionWarning(null);
         setError(null);
       } finally {
         setOperation(null);
@@ -172,9 +186,9 @@ export function useDs5Bridge(): UseDs5BridgeResult {
         setError(errorMessage(cause, t));
         setOperation(null);
       }
-      void readSignalStrengthWithClient(nextClient);
+      void readSignalStatusWithClient(nextClient);
     },
-    [readConfigWithClient, readFirmwareVersionWithClient, readSignalStrengthWithClient, t],
+    [readConfigWithClient, readFirmwareVersionWithClient, readSignalStatusWithClient, t],
   );
 
   const connect = useCallback(async () => {
@@ -234,7 +248,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
           break;
         }
 
-        await nextClient.applyConfig(nextDraft);
+        await nextClient.applyConfig(nextDraft, configRef.current);
         configRef.current = nextDraft;
         setConfig(nextDraft);
         setNeedsUsbReconnect(usbEffectiveConfigChanged(usbEffectiveConfigRef.current, nextDraft));
@@ -298,7 +312,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
 
   const setDraftField = useCallback(
     <Key extends keyof ConfigBody>(field: Key, value: ConfigBody[Key]) => {
-      const nextDraft = { ...draftRef.current, [field]: value };
+      const nextDraft = syncDraftVolumeFields({ ...draftRef.current, [field]: value }, field);
       draftRef.current = nextDraft;
       setDraft(nextDraft);
       setSaveState("dirty");
@@ -344,11 +358,11 @@ export function useDs5Bridge(): UseDs5BridgeResult {
     }
 
     const intervalId = window.setInterval(() => {
-      void readSignalStrengthWithClient(client);
+      void readSignalStatusWithClient(client);
     }, SIGNAL_STRENGTH_REFRESH_INTERVAL_MS);
 
     return () => window.clearInterval(intervalId);
-  }, [client, readSignalStrengthWithClient]);
+  }, [client, readSignalStatusWithClient]);
 
   useEffect(() => {
     if (!navigator.hid) {
@@ -363,9 +377,10 @@ export function useDs5Bridge(): UseDs5BridgeResult {
         usbEffectiveConfigRef.current = null;
         setClient(null);
         setFirmwareVersion(null);
-        setSignalStrengthRssi(null);
+        setSignalStatus(UNKNOWN_SIGNAL_STATUS);
         setConfig(null);
         setDraft(DEFAULT_CONFIG);
+        setConfigVersionWarning(null);
         setNeedsUsbReconnect(false);
         setSaveState("idle");
         setError(t("errors.disconnected"));
@@ -392,6 +407,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
     deviceLabel,
     firmwareVersion,
     signalStrengthRssi,
+    signalStatus,
     authorizedDevices,
     config,
     draft,
@@ -399,6 +415,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
     saveState,
     operation,
     error,
+    configVersionWarning,
     statusText,
     isConnected,
     isDirty,
@@ -437,6 +454,7 @@ function pickUsbEffectiveConfig(config: ConfigBody): UsbEffectiveConfig {
   return {
     pollingRateMode: config.pollingRateMode,
     controllerMode: config.controllerMode,
+    disableUsbSn: config.disableUsbSn,
   };
 }
 
@@ -445,7 +463,31 @@ function usbEffectiveConfigChanged(current: UsbEffectiveConfig | null, next: Con
     return false;
   }
 
-  return current.pollingRateMode !== next.pollingRateMode || current.controllerMode !== next.controllerMode;
+  return (
+    current.pollingRateMode !== next.pollingRateMode ||
+    current.controllerMode !== next.controllerMode ||
+    current.disableUsbSn !== next.disableUsbSn
+  );
+}
+
+function syncDraftVolumeFields(changedDraft: ConfigBody, changedField: keyof ConfigBody): ConfigBody {
+  if (changedField === "syncSpeakerHeadsetVolume" && changedDraft.syncSpeakerHeadsetVolume) {
+    return { ...changedDraft, headsetVolume: changedDraft.speakerVolume };
+  }
+
+  if (!changedDraft.syncSpeakerHeadsetVolume) {
+    return changedDraft;
+  }
+
+  if (changedField === "speakerVolume") {
+    return { ...changedDraft, headsetVolume: changedDraft.speakerVolume };
+  }
+
+  if (changedField === "headsetVolume") {
+    return { ...changedDraft, speakerVolume: changedDraft.headsetVolume };
+  }
+
+  return changedDraft;
 }
 
 function errorMessage(cause: unknown, t: (key: string, values?: Record<string, unknown>) => string): string {
