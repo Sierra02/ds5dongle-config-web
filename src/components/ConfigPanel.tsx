@@ -84,7 +84,7 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
                 label={t("config.triggerReduce")}
                 value={bridge.draft.triggerReduce}
                 min={0}
-                max={7}
+                max={10}
                 helpContent={t("config.help.triggerReduce")}
                 issue={fieldIssue(bridge.issues, "triggerReduce")}
                 disabled={controlsDisabled}

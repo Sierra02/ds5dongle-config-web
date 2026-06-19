@@ -162,7 +162,7 @@ export function validateConfig(config: ConfigBody): ConfigValidationIssue[] {
     issues.push({ field: "controllerMode" });
   }
 
-  if (!Number.isInteger(config.triggerReduce) || config.triggerReduce < 0 || config.triggerReduce > 7) {
+  if (!Number.isInteger(config.triggerReduce) || config.triggerReduce < 0 || config.triggerReduce > 10) {
     issues.push({ field: "triggerReduce" });
   }
 
@@ -185,7 +185,7 @@ export function normalizeConfig(config: ConfigBody): ConfigBody {
     disableMic: Boolean(config.disableMic),
     disableSpeaker: Boolean(config.disableSpeaker),
     enableWake: Boolean(config.enableWake),
-    triggerReduce: clampInteger(config.triggerReduce, 0, 7),
+    triggerReduce: clampInteger(config.triggerReduce, 0, 10),
   };
 }
 
