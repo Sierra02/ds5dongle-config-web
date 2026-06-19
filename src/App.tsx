@@ -52,14 +52,13 @@ export default function App() {
           theme={theme.theme}
           onThemeChange={theme.setTheme}
         />
-        <NoticeList supported={bridge.supported} configVersionWarning={bridge.configVersionWarning} />
+        <NoticeList supported={bridge.supported} />
         <DeviceStrip
           authorizedDevices={bridge.authorizedDevices}
           client={bridge.client}
           deviceLabel={bridge.deviceLabel}
           firmwareVersion={bridge.firmwareVersion}
           signalStrengthRssi={bridge.signalStrengthRssi}
-          signalStatus={bridge.signalStatus}
           isBusy={isBusy}
           supported={bridge.supported}
           onConnect={bridge.connect}
