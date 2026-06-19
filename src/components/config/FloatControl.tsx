@@ -21,6 +21,7 @@ interface FloatControlProps {
   fractionDigits?: number;
   helpContent?: string;
   issue?: ConfigValidationIssue;
+  disabled?: boolean;
   onChange: (value: number) => void;
 }
 
@@ -40,6 +41,7 @@ export function FloatControl({
   fractionDigits = 2,
   helpContent,
   issue,
+  disabled = false,
   onChange,
 }: FloatControlProps) {
   const { t } = useTranslation();
@@ -48,6 +50,10 @@ export function FloatControl({
   const inputValue = toDisplay(value);
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (disabled) {
+      return;
+    }
+
     const next = Number(event.currentTarget.value);
     if (Number.isFinite(next)) {
       onChange(toValue(next));
@@ -55,13 +61,17 @@ export function FloatControl({
   };
 
   const handleSliderChange = ([next]: number[]) => {
+    if (disabled) {
+      return;
+    }
+
     if (Number.isFinite(next)) {
       onChange(toValue(next));
     }
   };
 
   return (
-    <div className={`control-row ${issue ? "invalid" : ""}`}>
+    <div className={`control-row ${issue ? "invalid" : ""}`} aria-disabled={disabled}>
       <div>
         <span className="control-label">
           <strong>{label}</strong>
@@ -75,6 +85,7 @@ export function FloatControl({
           max={displayMax ?? toDisplay(max)}
           step={displayStep ?? step * displayScale}
           value={[inputValue]}
+          disabled={disabled}
           onValueChange={handleSliderChange}
         />
         <Input
@@ -85,6 +96,7 @@ export function FloatControl({
           value={inputValue.toFixed(fractionDigits)}
           onChange={handleChange}
           aria-invalid={Boolean(issue)}
+          disabled={disabled}
           className="font-bold"
         />
       </div>

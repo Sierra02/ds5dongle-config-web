@@ -12,13 +12,27 @@ interface IntegerControlProps {
   max: number;
   helpContent?: string;
   issue?: ConfigValidationIssue;
+  disabled?: boolean;
   onChange: (value: number) => void;
 }
 
-export function IntegerControl({ label, value, min, max, helpContent, issue, onChange }: IntegerControlProps) {
+export function IntegerControl({
+  label,
+  value,
+  min,
+  max,
+  helpContent,
+  issue,
+  disabled = false,
+  onChange,
+}: IntegerControlProps) {
   const { t } = useTranslation();
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (disabled) {
+      return;
+    }
+
     const next = Number(event.currentTarget.value);
     if (Number.isFinite(next)) {
       onChange(Math.round(next));
@@ -26,13 +40,17 @@ export function IntegerControl({ label, value, min, max, helpContent, issue, onC
   };
 
   const handleSliderChange = ([next]: number[]) => {
+    if (disabled) {
+      return;
+    }
+
     if (Number.isFinite(next)) {
       onChange(Math.round(next));
     }
   };
 
   return (
-    <div className={`control-row ${issue ? "invalid" : ""}`}>
+    <div className={`control-row ${issue ? "invalid" : ""}`} aria-disabled={disabled}>
       <div>
         <span className="control-label">
           <strong>{label}</strong>
@@ -41,7 +59,14 @@ export function IntegerControl({ label, value, min, max, helpContent, issue, onC
         {issue && <small>{t(`validation.${issue.field}`)}</small>}
       </div>
       <div className="range-inputs">
-        <Slider min={min} max={max} step={1} value={[value]} onValueChange={handleSliderChange} />
+        <Slider
+          min={min}
+          max={max}
+          step={1}
+          value={[value]}
+          disabled={disabled}
+          onValueChange={handleSliderChange}
+        />
         <Input
           type="number"
           min={min}
@@ -50,6 +75,7 @@ export function IntegerControl({ label, value, min, max, helpContent, issue, onC
           value={value}
           onChange={handleChange}
           aria-invalid={Boolean(issue)}
+          disabled={disabled}
           className="font-bold"
         />
       </div>

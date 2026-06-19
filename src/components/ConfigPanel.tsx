@@ -15,6 +15,7 @@ interface ConfigPanelProps {
 
 export function ConfigPanel({ bridge }: ConfigPanelProps) {
   const { t } = useTranslation();
+  const controlsDisabled = !bridge.isConnected;
 
   return (
     <Card className="panel config-panel">
@@ -46,6 +47,7 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
                 step={0.05}
                 helpContent={t("config.help.hapticsGain")}
                 issue={fieldIssue(bridge.issues, "hapticsGain")}
+                disabled={controlsDisabled}
                 onChange={(value) => bridge.setDraftField("hapticsGain", value)}
               />
               <IntegerControl
@@ -55,6 +57,7 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
                 max={127}
                 helpContent={t("config.help.speakerVolume")}
                 issue={fieldIssue(bridge.issues, "speakerVolume")}
+                disabled={controlsDisabled}
                 onChange={(value) => bridge.setDraftField("speakerVolume", value)}
               />
               <IntegerControl
@@ -64,6 +67,7 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
                 max={127}
                 helpContent={t("config.help.headsetVolume")}
                 issue={fieldIssue(bridge.issues, "headsetVolume")}
+                disabled={controlsDisabled}
                 onChange={(value) => bridge.setDraftField("headsetVolume", value)}
               />
               <IntegerControl
@@ -73,6 +77,7 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
                 max={7}
                 helpContent={t("config.help.speakerGain")}
                 issue={fieldIssue(bridge.issues, "speakerGain")}
+                disabled={controlsDisabled}
                 onChange={(value) => bridge.setDraftField("speakerGain", value)}
               />
               <IntegerControl
@@ -82,6 +87,7 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
                 max={7}
                 helpContent={t("config.help.triggerReduce")}
                 issue={fieldIssue(bridge.issues, "triggerReduce")}
+                disabled={controlsDisabled}
                 onChange={(value) => bridge.setDraftField("triggerReduce", value)}
               />
               <IntegerControl
@@ -91,6 +97,7 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
                 max={127}
                 helpContent={t("config.help.audioBufferLength")}
                 issue={fieldIssue(bridge.issues, "audioBufferLength")}
+                disabled={controlsDisabled}
                 onChange={(value) => bridge.setDraftField("audioBufferLength", value)}
               />
             </div>
@@ -110,6 +117,7 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
               <PollingRateControl
                 value={bridge.draft.pollingRateMode}
                 helpContent={t("config.help.pollingRateMode")}
+                disabled={controlsDisabled}
                 onChange={(value) => bridge.setDraftField("pollingRateMode", value)}
               />
             </div>
@@ -135,30 +143,35 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
                 max={60}
                 helpContent={t("config.help.inactiveTime")}
                 issue={fieldIssue(bridge.issues, "inactiveTime")}
+                disabled={controlsDisabled}
                 onChange={(value) => bridge.setDraftField("inactiveTime", value)}
               />
               <ToggleControl
                 label={t("config.disablePicoLed")}
                 value={bridge.draft.disablePicoLed}
                 helpContent={t("config.help.disablePicoLed")}
+                disabled={controlsDisabled}
                 onChange={(value) => bridge.setDraftField("disablePicoLed", value)}
               />
               <ToggleControl
                 label={t("config.disableMic")}
                 value={bridge.draft.disableMic}
                 helpContent={t("config.help.disableMic")}
+                disabled={controlsDisabled}
                 onChange={(value) => bridge.setDraftField("disableMic", value)}
               />
               <ToggleControl
                 label={t("config.disableSpeaker")}
                 value={bridge.draft.disableSpeaker}
                 helpContent={t("config.help.disableSpeaker")}
+                disabled={controlsDisabled}
                 onChange={(value) => bridge.setDraftField("disableSpeaker", value)}
               />
               <ToggleControl
                 label={t("config.enableWake")}
                 value={bridge.draft.enableWake}
                 helpContent={t("config.help.enableWake")}
+                disabled={controlsDisabled}
                 onChange={(value) => bridge.setDraftField("enableWake", value)}
               />
             </div>
@@ -178,18 +191,21 @@ export function ConfigPanel({ bridge }: ConfigPanelProps) {
               <ControllerModeControl
                 value={bridge.draft.controllerMode}
                 helpContent={t("config.help.controllerMode")}
+                disabled={controlsDisabled}
                 onChange={(value) => bridge.setDraftField("controllerMode", value)}
               />
               <ToggleControl
                 label={t("config.enableUsbSn")}
                 value={bridge.draft.enableUsbSn}
                 helpContent={t("config.help.enableUsbSn")}
+                disabled={controlsDisabled}
                 onChange={(value) => bridge.setDraftField("enableUsbSn", value)}
               />
               <ToggleControl
                 label={t("config.psShortcutEnabled")}
                 value={bridge.draft.psShortcutEnabled}
                 helpContent={t("config.help.psShortcutEnabled")}
+                disabled={controlsDisabled}
                 onChange={(value) => bridge.setDraftField("psShortcutEnabled", value)}
               />
             </div>

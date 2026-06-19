@@ -18,6 +18,16 @@ const CMD_UPDATE_CONFIG = 0x01;
 const CMD_SAVE_TO_FLASH = 0x02;
 const CMD_RECONNECT_USB = 0x03;
 
+export interface AudioActivityState {
+  speakerActive: boolean;
+  micActive: boolean;
+}
+
+export interface SignalStrengthReport {
+  rssi: number | null;
+  audioActivity: AudioActivityState | null;
+}
+
 export class Ds5BridgeHidClient {
   constructor(public readonly device: HIDDevice) {}
 
@@ -71,7 +81,7 @@ export class Ds5BridgeHidClient {
     return decodeFirmwareVersion(report);
   }
 
-  async readSignalStrength(): Promise<number | null> {
+  async readSignalStrength(): Promise<SignalStrengthReport> {
     await this.open();
     const report = await this.device.receiveFeatureReport(REPORT_GET_SIGNAL_STRENGTH);
     return decodeSignalStrength(report);
@@ -146,22 +156,48 @@ function decodePrintableString(bytes: Uint8Array): string {
   return /^[\x20-\x7e]+$/.test(text) ? text : "";
 }
 
-function decodeSignalStrength(source: ArrayBuffer | DataView | Uint8Array): number | null {
+function decodeSignalStrength(source: ArrayBuffer | DataView | Uint8Array): SignalStrengthReport {
   const bytes = toUint8Array(source);
-  const offsets = bytes[0] === REPORT_GET_SIGNAL_STRENGTH ? [1, 0] : [0, 1];
+  const offsets = bytes[0] === REPORT_GET_SIGNAL_STRENGTH ? [1, 0] : [0];
+  const candidates = offsets
+    .filter((offset) => offset < bytes.length)
+    .map((offset) => decodeSignalStrengthAtOffset(bytes, offset))
+    .filter((candidate) => candidate.rssi !== null);
 
-  for (const offset of offsets) {
-    if (offset >= bytes.length) {
-      continue;
-    }
-
-    const value = toInt8(bytes[offset]);
-    if (value >= -128 && value <= 0) {
-      return value;
-    }
+  const candidateWithAudioActivity = candidates.find((candidate) => candidate.audioActivity);
+  if (candidateWithAudioActivity) {
+    return candidateWithAudioActivity;
   }
 
-  return null;
+  const preferredCandidate = candidates[0];
+  if (preferredCandidate) {
+    return preferredCandidate;
+  }
+
+  return {
+    rssi: null,
+    audioActivity: null,
+  };
+}
+
+function decodeSignalStrengthAtOffset(bytes: Uint8Array, offset: number): SignalStrengthReport {
+  const rssi = toInt8(bytes[offset]);
+  const flags = bytes[offset + 1];
+
+  return {
+    rssi: rssi >= -128 && rssi <= 0 ? rssi : null,
+    audioActivity:
+      flags === undefined || !isAudioActivityFlags(flags)
+        ? null
+        : {
+            speakerActive: Boolean(flags & 0x02),
+            micActive: Boolean(flags & 0x01),
+          },
+  };
+}
+
+function isAudioActivityFlags(flags: number): boolean {
+  return (flags & 0x80) !== 0 && (flags & 0x7c) === 0;
 }
 
 function toInt8(byte: number): number {

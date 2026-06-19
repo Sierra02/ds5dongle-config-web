@@ -2,6 +2,7 @@ import { Power, Usb } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import type { AudioActivityState } from "../protocol/ds5BridgeHid";
 
 interface DeviceStripProps {
   authorizedDevices: HIDDevice[];
@@ -9,6 +10,7 @@ interface DeviceStripProps {
   deviceLabel: string;
   firmwareVersion: string | null;
   signalStrengthRssi: number | null;
+  audioActivity: AudioActivityState | null;
   isBusy: boolean;
   supported: boolean;
   onConnect: () => void;
@@ -21,6 +23,7 @@ export function DeviceStrip({
   deviceLabel,
   firmwareVersion,
   signalStrengthRssi,
+  audioActivity,
   isBusy,
   supported,
   onConnect,
@@ -49,6 +52,14 @@ export function DeviceStrip({
                   <span>{t("device.signalStrength")}</span>
                   <code>{formatSignalStrength(signalStrengthRssi, t)}</code>
                 </span>
+                {audioActivity && (
+                  <span className="device-metadata-item device-audio-activity">
+                    <span>{t("device.audioSpeaker")}</span>
+                    <code>{audioActivity.speakerActive ? t("device.audioActive") : t("device.audioInactive")}</code>
+                    <span>{t("device.audioMicrophone")}</span>
+                    <code>{audioActivity.micActive ? t("device.audioActive") : t("device.audioInactive")}</code>
+                  </span>
+                )}
               </div>
             )}
           </div>

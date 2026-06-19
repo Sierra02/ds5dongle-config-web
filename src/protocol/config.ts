@@ -1,4 +1,4 @@
-export const CONFIG_BODY_VERSION = 6;
+export const CONFIG_BODY_VERSION = 5;
 export const CONFIG_BODY_SIZE = 19;
 export const FEATURE_REPORT_PAYLOAD_SIZE = 63;
 

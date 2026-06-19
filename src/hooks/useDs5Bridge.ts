@@ -16,6 +16,7 @@ import {
   getDeviceLabel,
   webHidAvailable,
 } from "../protocol/ds5BridgeHid";
+import type { AudioActivityState } from "../protocol/ds5BridgeHid";
 
 type Operation = "connecting" | "reading" | "readingFirmware" | "applying" | "saving" | "reconnecting" | null;
 type SaveState = "idle" | "dirty" | "applied" | "saved";
@@ -29,6 +30,7 @@ export interface UseDs5BridgeResult {
   deviceLabel: string;
   firmwareVersion: string | null;
   signalStrengthRssi: number | null;
+  audioActivity: AudioActivityState | null;
   authorizedDevices: HIDDevice[];
   config: ConfigBody | null;
   draft: ConfigBody;
@@ -59,6 +61,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
   const [authorizedDevices, setAuthorizedDevices] = useState<HIDDevice[]>([]);
   const [firmwareVersion, setFirmwareVersion] = useState<string | null>(null);
   const [signalStrengthRssi, setSignalStrengthRssi] = useState<number | null>(null);
+  const [audioActivity, setAudioActivity] = useState<AudioActivityState | null>(null);
   const [config, setConfig] = useState<ConfigBody | null>(null);
   const [draft, setDraft] = useState<ConfigBody>(DEFAULT_CONFIG);
   const [operation, setOperation] = useState<Operation>(null);
@@ -142,11 +145,13 @@ export function useDs5Bridge(): UseDs5BridgeResult {
     try {
       const nextSignalStrength = await nextClient.readSignalStrength();
       if (clientRef.current === nextClient) {
-        setSignalStrengthRssi(nextSignalStrength);
+        setSignalStrengthRssi(nextSignalStrength.rssi);
+        setAudioActivity(nextSignalStrength.audioActivity);
       }
     } catch {
       if (clientRef.current === nextClient) {
         setSignalStrengthRssi(null);
+        setAudioActivity(null);
       }
     }
   }, []);
@@ -160,6 +165,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
         setClient(nextClient);
         setFirmwareVersion(null);
         setSignalStrengthRssi(null);
+        setAudioActivity(null);
         setError(null);
       } finally {
         setOperation(null);
@@ -298,6 +304,10 @@ export function useDs5Bridge(): UseDs5BridgeResult {
 
   const setDraftField = useCallback(
     <Key extends keyof ConfigBody>(field: Key, value: ConfigBody[Key]) => {
+      if (!clientRef.current?.device.opened) {
+        return;
+      }
+
       const nextDraft = { ...draftRef.current, [field]: value };
       draftRef.current = nextDraft;
       setDraft(nextDraft);
@@ -364,6 +374,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
         setClient(null);
         setFirmwareVersion(null);
         setSignalStrengthRssi(null);
+        setAudioActivity(null);
         setConfig(null);
         setDraft(DEFAULT_CONFIG);
         setNeedsUsbReconnect(false);
@@ -392,6 +403,7 @@ export function useDs5Bridge(): UseDs5BridgeResult {
     deviceLabel,
     firmwareVersion,
     signalStrengthRssi,
+    audioActivity,
     authorizedDevices,
     config,
     draft,

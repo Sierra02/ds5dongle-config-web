@@ -6,10 +6,11 @@ import { ConfigHelpButton } from "./ConfigHelpButton";
 interface PollingRateControlProps {
   value: PollingRateMode;
   helpContent?: string;
+  disabled?: boolean;
   onChange: (value: PollingRateMode) => void;
 }
 
-export function PollingRateControl({ value, helpContent, onChange }: PollingRateControlProps) {
+export function PollingRateControl({ value, helpContent, disabled = false, onChange }: PollingRateControlProps) {
   const { t } = useTranslation();
   const label = t("config.pollingRateMode");
   const optionLabels: Record<PollingRateMode, string> = {
@@ -19,19 +20,28 @@ export function PollingRateControl({ value, helpContent, onChange }: PollingRate
   };
 
   return (
-    <div className="control-row">
+    <div className="control-row" aria-disabled={disabled}>
       <span className="control-label">
         <strong>{label}</strong>
         {helpContent && <ConfigHelpButton title={label} content={helpContent} />}
       </span>
       <Tabs
         value={String(value)}
-        onValueChange={(next) => onChange(Number(next) as PollingRateMode)}
+        onValueChange={(next) => {
+          if (!disabled) {
+            onChange(Number(next) as PollingRateMode);
+          }
+        }}
         className="w-full"
       >
         <TabsList className="grid h-10 w-full grid-cols-3">
           {POLLING_RATE_OPTIONS.map((option) => (
-            <TabsTrigger key={option.value} value={String(option.value)} className="h-8 text-sm font-bold">
+            <TabsTrigger
+              key={option.value}
+              value={String(option.value)}
+              disabled={disabled}
+              className="h-8 text-sm font-bold"
+            >
               {optionLabels[option.value]}
             </TabsTrigger>
           ))}
