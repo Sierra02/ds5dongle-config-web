@@ -33,13 +33,19 @@ export const zh = {
   },
   pwa: {
     offlineReady: "网页已缓存，可离线访问",
-    cacheRefresh: "检测到新版本，正在更新网页缓存",
+    cacheRefresh: "检测到新版本",
     refreshCache: "刷新网页缓存",
     refreshCacheTitle: "清除网页缓存并重新加载页面",
     cacheRefreshing: "正在刷新网页缓存",
     cacheRefreshed: "网页缓存已刷新，正在重新加载",
     cacheRefreshFailed: "网页缓存刷新失败",
     cacheRefreshOffline: "离线状态无法刷新网页缓存",
+    cacheRefreshDeclined: "已保持当前网页版本",
+    updatePromptTitle: "网页更新",
+    updatePromptMessage:
+      "检测到网页更新，是否进行更新？注意：如果你正在使用旧版本的DS5Dongle固件，更新后的网页可能会不适配旧版本",
+    updatePromptConfirm: "是",
+    updatePromptCancel: "否",
   },
   footer: {
     title: "Pico2W DualSense 5 Bridge",

@@ -33,13 +33,19 @@ export const en = {
   },
   pwa: {
     offlineReady: "This page is cached and ready for offline access.",
-    cacheRefresh: "A new version is available. Updating the page cache.",
+    cacheRefresh: "A new version is available.",
     refreshCache: "Refresh page cache",
     refreshCacheTitle: "Clear the page cache and reload",
     cacheRefreshing: "Refreshing the page cache",
     cacheRefreshed: "Page cache refreshed. Reloading.",
     cacheRefreshFailed: "Failed to refresh the page cache.",
     cacheRefreshOffline: "The page cache cannot be refreshed while offline.",
+    cacheRefreshDeclined: "Keeping the current page version.",
+    updatePromptTitle: "Page update",
+    updatePromptMessage:
+      "A web page update is available. Update now? Note: if you are using older DS5Dongle firmware, the updated page may not be compatible with the older firmware.",
+    updatePromptConfirm: "Yes",
+    updatePromptCancel: "No",
   },
   footer: {
     title: "Pico2W DualSense 5 Bridge",
