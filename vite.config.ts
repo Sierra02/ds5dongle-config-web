@@ -9,7 +9,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       includeAssets: ["pwa-icon.svg", "pwa-192x192.png", "pwa-512x512.png"],
       manifest: {
         name: "DS5 Bridge Config",
