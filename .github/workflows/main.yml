@@ -1,0 +1,50 @@
+name: 自动编译并部署网页
+
+on:
+  push:
+    branches:
+      - master # 或者是你想要触发编译的分支名（比如 master 或 main）
+  workflow_dispatch: # 允许你手动点击按钮触发编译
+
+# 给予该流水线写入和部署 GitHub Pages 的最高权限
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. 拉取仓库源码
+        uses: actions/checkout@v4
+
+      - name: 2. 安装 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 3. 安装依赖库并执行打包编译
+        run: |
+          npm install
+          npm run build -- --base=./  # 这一步极其关键，强行将打包路径改为相对路径，确保完全离线可用
+
+      - name: 4. 配置 GitHub Pages 页面环境
+        uses: actions/configure-pages@v5
+
+      - name: 5. 将编译出的 dist 文件夹打包上传
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist' # 告诉服务器把打包生成的 dist 目录传上去
+
+      - name: 6. 正式发布到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
